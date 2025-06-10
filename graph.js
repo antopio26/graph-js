@@ -1,31 +1,34 @@
 /*
- * graph-l.js
+ * graph.js
  *
  * A comprehensive and intuitive wrapper for the dagre.js and grapher.js libraries,
  * designed to simplify the creation and rendering of complex graphs.
+ * This is a rewritten version for improved clarity, robustness, and feature alignment
+ * with the provided documentation and examples.
  *
  * Author: Gemini
- * Version: 1.0.0
+ * Version: 2.2.0 (Patched)
  */
 
 import { layout } from './dagre.js';
 import * as grapher from './grapher.js';
 
 /**
- * A class to create and manage graph visualizations.
+ * A class to create and manage graph visualizations, acting as a facade
+ * for dagre.js (layout) and grapher.js (rendering).
  */
 export class GraphLibrary {
     /**
      * @param {HTMLElement} container - The HTML element to render the graph in.
      * @param {object} [options={}] - Configuration options for the graph.
-     * @param {string} [options.direction='TD'] - The direction of the graph layout (e.g., 'TB', 'LR').
+     * @param {string} [options.direction='TB'] - The direction of the graph layout ('TB', 'BT', 'LR', 'RL').
      * @param {number} [options.nodeSep=50] - The separation between nodes.
      * @param {number} [options.rankSep=50] - The separation between ranks (layers).
-     * @param {boolean} [options.compound=true] - Whether to enable support for compound graphs (clusters).
+     * @param {boolean} [options.compound=true] - Enables support for compound graphs (clusters).
      */
     constructor(container, options = {}) {
-        if (!container) {
-            throw new Error('A container element must be provided.');
+        if (!container || !(container instanceof HTMLElement)) {
+            throw new Error('A valid container HTML element must be provided.');
         }
 
         this.container = container;
@@ -42,39 +45,36 @@ export class GraphLibrary {
         this._clusters = new Map();
         this._eventListeners = new Map();
 
-        this.container.style.position = 'relative';
+        if (getComputedStyle(this.container).position === 'static') {
+            this.container.style.position = 'relative';
+        }
     }
 
     /**
-     * Adds a node to the graph.
+     * Adds a node to the graph definition.
      * @param {object} nodeOptions - The options for the node.
      * @param {string} nodeOptions.id - A unique identifier for the node.
      * @param {string} [nodeOptions.label=''] - The text to display inside the node.
      * @param {object} [nodeOptions.style={}] - Custom styling for the node.
-     * @param {string} [nodeOptions.style.shape='rect'] - The shape of the node ('rect', 'circle', 'ellipse').
-     * @param {string} [nodeOptions.style.backgroundColor='#fff'] - The background color of the node.
-     * @param {string} [nodeOptions.style.borderColor='#000'] - The border color of the node.
+     * @param {string} [nodeOptions.style.backgroundColor] - The background color of the node.
+     * @param {string} [nodeOptions.style.borderColor] - The border color of the node.
      * @param {number} [nodeOptions.style.width=120] - The width of the node.
      * @param {number} [nodeOptions.style.height=60] - The height of the node.
+     * @param {string} [nodeOptions.styleClass] - A CSS class to apply to the node group for custom styling.
      * @param {string} [nodeOptions.parent] - The ID of the parent cluster.
      */
     addNode(nodeOptions) {
         if (!nodeOptions.id) {
             throw new Error('Node ID must be provided.');
         }
-        if (this._nodes.has(nodeOptions.id)) {
-            console.warn(`Node with ID '${nodeOptions.id}' already exists. It will be overwritten.`);
+        if (this._nodes.has(nodeOptions.id) || this._clusters.has(nodeOptions.id)) {
+            console.warn(`A node or cluster with ID '${nodeOptions.id}' already exists. Overwriting is not supported; please use unique IDs.`);
+            return;
         }
 
         const node = {
             label: '',
-            style: {
-                shape: 'rect',
-                backgroundColor: '#fff',
-                borderColor: '#000',
-                width: 120,
-                height: 60,
-            },
+            style: {},
             ...nodeOptions,
         };
 
@@ -88,24 +88,24 @@ export class GraphLibrary {
      * @param {string} edgeOptions.to - The ID of the target node.
      * @param {string} [edgeOptions.label=''] - The text to display on the edge.
      * @param {object} [edgeOptions.style={}] - Custom styling for the edge.
-     * @param {string} [edgeOptions.style.color='#000'] - The color of the edge line.
-     * @param {string} [edgeOptions.style.arrowhead='normal'] - The style of the arrowhead.
+     * @param {string} [edgeOptions.styleClass] - A CSS class to apply to the edge path for custom styling.
      */
     addEdge(edgeOptions) {
         if (!edgeOptions.from || !edgeOptions.to) {
             throw new Error('Edge must have "from" and "to" properties.');
         }
+        if (!this._nodes.has(edgeOptions.from) && !this._clusters.has(edgeOptions.from)) {
+            console.warn(`Edge 'from' node '${edgeOptions.from}' does not exist.`);
+        }
+        if (!this._nodes.has(edgeOptions.to) && !this._clusters.has(edgeOptions.to)) {
+            console.warn(`Edge 'to' node '${edgeOptions.to}' does not exist.`);
+        }
 
-        const edge = {
+        this._edges.push({
             label: '',
-            style: {
-                color: '#000',
-                arrowhead: 'normal',
-            },
+            style: {},
             ...edgeOptions,
-        };
-
-        this._edges.push(edge);
+        });
     }
 
     /**
@@ -115,22 +115,23 @@ export class GraphLibrary {
      * @param {string} [clusterOptions.label=''] - The text to display for the cluster.
      * @param {string} [clusterOptions.parent] - The ID of a parent cluster for nesting.
      * @param {object} [clusterOptions.style={}] - Custom styling for the cluster.
-     * @param {string} [clusterOptions.style.backgroundColor='rgba(0,0,0,0.05)'] - The background color of the cluster.
+     * @param {string} [clusterOptions.style.backgroundColor] - The background color of the cluster.
+     * @param {number} [clusterOptions.style.rx] - X-axis radius for rounded corners.
+     * @param {number} [clusterOptions.style.ry] - Y-axis radius for rounded corners.
+     * @param {string} [clusterOptions.styleClass] - A CSS class to apply to the cluster group.
      */
     addCluster(clusterOptions) {
         if (!clusterOptions.id) {
             throw new Error('Cluster ID must be provided.');
         }
-        if (this._clusters.has(clusterOptions.id)) {
-            console.warn(`Cluster with ID '${clusterOptions.id}' already exists.`);
+        if (this._clusters.has(clusterOptions.id) || this._nodes.has(clusterOptions.id)) {
+            console.warn(`A cluster or node with ID '${clusterOptions.id}' already exists. Please use unique IDs.`);
             return;
         }
 
         const cluster = {
             label: '',
-            style: {
-                backgroundColor: 'rgba(0,0,0,0.05)',
-            },
+            style: {},
             ...clusterOptions,
         };
 
@@ -138,86 +139,14 @@ export class GraphLibrary {
     }
 
     /**
-     * Renders the graph to the container.
+     * Renders the graph in the container. This is an asynchronous operation.
+     * @returns {Promise<void>} A promise that resolves when rendering is complete.
      */
     async render() {
-        this.container.innerHTML = ''; // Clear previous content
+        this.container.innerHTML = ''; 
 
-        const g = new grapher.Graph(this.options.compound);
+        const { dagreNodes, dagreEdges } = this._prepareDagreData();
 
-        // Add clusters first
-        this._clusters.forEach(cluster => {
-            const clusterNode = new grapher.Node();
-            clusterNode.rectangle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-             if (cluster.style && cluster.style.rx) {
-                clusterNode.rectangle.setAttribute('rx', cluster.style.rx);
-            }
-            if (cluster.style && cluster.style.ry) {
-                clusterNode.rectangle.setAttribute('ry', cluster.style.ry);
-            }
-            clusterNode.element = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            clusterNode.element.setAttribute('class', 'cluster');
-             if(cluster.style && cluster.style.backgroundColor) {
-                clusterNode.rectangle.style.fill = cluster.style.backgroundColor;
-            }
-            clusterNode.element.appendChild(clusterNode.rectangle);
-
-            if (cluster.label) {
-                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                label.textContent = cluster.label;
-                label.setAttribute('x', 10);
-                label.setAttribute('y', 20);
-                clusterNode.element.appendChild(label);
-            }
-
-            g.setNode({ name: cluster.id, label: clusterNode });
-            if (cluster.parent) {
-                g.setParent(cluster.id, cluster.parent);
-            }
-        });
-
-        // Add nodes
-        const dagreNodes = [];
-        this._nodes.forEach(node => {
-            const grapherNode = this._createGrapherNode(node);
-            g.setNode({ name: node.id, label: grapherNode });
-            if (node.parent) {
-                g.setParent(node.id, node.parent);
-            }
-
-            dagreNodes.push({
-                v: node.id,
-                width: node.style.width,
-                height: node.style.height,
-                parent: node.parent
-            });
-        });
-
-        // Add edges
-        const dagreEdges = [];
-        this._edges.forEach(edge => {
-            const fromNode = g.node(edge.from);
-            const toNode = g.node(edge.to);
-
-            if (!fromNode || !toNode) {
-                console.error(`Edge references non-existent node. From: ${edge.from}, To: ${edge.to}`);
-                return;
-            }
-
-            const grapherEdge = new grapher.Edge(fromNode.label, toNode.label);
-            grapherEdge.label = edge.label;
-            g.setEdge({ v: edge.from, w: edge.to, label: grapherEdge });
-
-            dagreEdges.push({
-                v: edge.from,
-                w: edge.to,
-                label: edge.label,
-                minlen: edge.minlen || 1,
-                weight: edge.weight || 1
-            });
-        });
-
-        // Layout the graph
         const state = {};
         const layoutOptions = {
             rankdir: this.options.direction,
@@ -225,43 +154,33 @@ export class GraphLibrary {
             ranksep: this.options.rankSep,
         };
 
-        await layout(dagreNodes, dagreEdges, layoutOptions, state);
+        try {
+            await layout(dagreNodes, dagreEdges, layoutOptions, state);
+        } catch (error) {
+            console.error('Error during graph layout:', error);
+            return;
+        }
 
-        // Apply layout to grapher nodes
-        dagreNodes.forEach(node => {
-            const grapherNode = g.node(node.v).label;
-            grapherNode.x = node.x;
-            grapherNode.y = node.y;
-            grapherNode.width = node.width;
-            grapherNode.height = node.height;
-        });
-        
-        // Apply layout to edges
-        dagreEdges.forEach(edge => {
-            const grapherEdge = g.edge(edge.v, edge.w).label;
-            grapherEdge.points = edge.points;
-             if ('x' in edge) {
-                grapherEdge.x = edge.x;
-                grapherEdge.y = edge.y;
-            }
-        });
+        const g = this._buildGrapherGraph(dagreNodes, dagreEdges);
 
-        // Build and render SVG
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         this.container.appendChild(svg);
         
         g.build(document, svg);
+        
+        this._applyNodeStyles(g);
+        this._styleClusters(g);
+        
         g.measure();
         g.update();
 
-        // Fit SVG to content
         this._fitSvgToContent(svg);
         this._attachEventListeners(g);
     }
 
     /**
-     * Register an event listener.
-     * @param {string} event - The name of the event (e.g., 'node:click').
+     * Registers an event listener for graph events.
+     * @param {string} event - The name of the event (e.g., 'node:click', 'edge:click').
      * @param {function} callback - The function to call when the event is triggered.
      */
     on(event, callback) {
@@ -271,45 +190,192 @@ export class GraphLibrary {
         this._eventListeners.get(event).push(callback);
     }
 
-    _createGrapherNode(node) {
-        const grapherNode = new grapher.Node();
-        const header = grapherNode.header();
+    /** @private */
+    _prepareDagreData() {
+        const dagreNodes = [];
+        this._clusters.forEach(cluster => {
+            dagreNodes.push({ v: cluster.id, parent: cluster.parent });
+        });
+        this._nodes.forEach(node => {
+            dagreNodes.push({
+                v: node.id,
+                width: node.style?.width || 120,
+                height: node.style?.height || 60,
+                parent: node.parent
+            });
+        });
 
-        const title = header.add(null, ['node-item-type'], node.label, node.label);
-        title.path.style.fill = node.style.backgroundColor;
-        title.path.style.stroke = node.style.borderColor;
+        const dagreEdges = this._edges.map(edge => ({
+            v: edge.from,
+            w: edge.to,
+            label: edge.label || '',
+            minlen: 1,
+            weight: 1,
+            width: 0,
+            height: 0,
+            labeloffset: 10,
+            labelpos: 'r',
+        }));
+
+        return { dagreNodes, dagreEdges };
+    }
+    
+    /**
+     * *** FIX: This method has been updated ***
+     * @private 
+     * Constructs a grapher.js graph instance from the layouted dagre data.
+     */
+    _buildGrapherGraph(layoutedNodes, layoutedEdges) {
+        const g = new grapher.Graph(this.options.compound);
+        const nodeMap = new Map([...this._nodes, ...this._clusters]);
+
+        layoutedNodes.forEach(nodeData => {
+            const info = nodeMap.get(nodeData.v);
+            const isCluster = this._clusters.has(nodeData.v);
+            
+            const grapherNode = isCluster 
+                ? this._createGrapherCluster(info)
+                : this._createGrapherNode(info);
+
+            Object.assign(grapherNode, nodeData);
+            
+            // Add the 'name' property, which grapher.js uses as the node key.
+            grapherNode.name = nodeData.v;
+            g.setNode(grapherNode); // Pass the grapher.Node instance directly.
+            
+            if (info.parent) {
+                g.setParent(nodeData.v, info.parent);
+            }
+        });
+
+        layoutedEdges.forEach(edgeData => {
+            const fromNode = g.node(edgeData.v);
+            const toNode = g.node(edgeData.w);
+            if (!fromNode || !toNode) return;
+
+            const edgeInfo = this._edges.find(e => e.from === edgeData.v && e.to === edgeData.w && e.label === edgeData.label);
+            const grapherEdge = new grapher.Edge(fromNode.label, toNode.label);
+            
+            Object.assign(grapherEdge, edgeData);
+            grapherEdge.class = edgeInfo?.styleClass || '';
+
+            // Pass the grapher.Edge instance directly. It now contains the required .v and .w properties.
+            g.setEdge(grapherEdge);
+        });
+
+        return g;
+    }
+
+    /** @private */
+    _createGrapherNode(nodeInfo) {
+        const grapherNode = new grapher.Node();
+        grapherNode.class = nodeInfo.styleClass || '';
+
+        const header = grapherNode.header();
+        const title = header.add(null, ['node-item-type'], nodeInfo.label, nodeInfo.label);
+
+        if (nodeInfo.style?.backgroundColor) {
+            title.backgroundColor = nodeInfo.style.backgroundColor;
+        }
+        if (nodeInfo.style?.borderColor) {
+            title.borderColor = nodeInfo.style.borderColor;
+        }
         
         return grapherNode;
     }
     
+    /** @private */
+    _applyNodeStyles(graphInstance) {
+        graphInstance.nodes.forEach((node, nodeId) => {
+            if (this._clusters.has(nodeId)) return;
+
+            const grapherNode = node.label;
+            for (const block of grapherNode._blocks) {
+                if (block instanceof grapher.Node.Header) {
+                    for (const entry of block._entries) {
+                        if (entry.path) {
+                            if (entry.backgroundColor) {
+                                entry.path.style.fill = entry.backgroundColor;
+                            }
+                            if (entry.borderColor) {
+                                entry.path.style.stroke = entry.borderColor;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /** @private */
+    _createGrapherCluster(clusterInfo) {
+        const clusterNode = new grapher.Node();
+        clusterNode.class = clusterInfo.styleClass || '';
+        
+        if (clusterInfo.style?.rx) clusterNode.rx = clusterInfo.style.rx;
+        if (clusterInfo.style?.ry) clusterNode.ry = clusterInfo.style.ry;
+
+        return clusterNode;
+    }
+    
+    /** @private */
+    _styleClusters(graphInstance) {
+        this._clusters.forEach(clusterInfo => {
+            const clusterNode = graphInstance.node(clusterInfo.id)?.label;
+            if (clusterNode?.element) {
+                if (clusterInfo.style?.backgroundColor && clusterNode.rectangle) {
+                    clusterNode.rectangle.style.fill = clusterInfo.style.backgroundColor;
+                }
+                if (clusterInfo.label) {
+                    const labelElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    labelElement.textContent = clusterInfo.label;
+                    labelElement.setAttribute('x', -clusterNode.width / 2 + 10);
+                    labelElement.setAttribute('y', -clusterNode.height / 2 + 20);
+                    labelElement.setAttribute('font-family', 'sans-serif');
+                    labelElement.setAttribute('font-size', '14px');
+                    clusterNode.element.appendChild(labelElement);
+                }
+            }
+        });
+    }
+
+    /** @private */
     _fitSvgToContent(svg) {
+        if (!svg.getBBox) return;
         const bbox = svg.getBBox();
+        if (bbox.width === 0 || bbox.height === 0) return;
+        
         const margin = 20;
         const width = bbox.width + margin * 2;
         const height = bbox.height + margin * 2;
+        
         svg.setAttribute('width', width);
         svg.setAttribute('height', height);
         svg.setAttribute('viewBox', `${bbox.x - margin} ${bbox.y - margin} ${width} ${height}`);
     }
 
+    /** @private */
     _attachEventListeners(graphInstance) {
-        graphInstance.nodes.forEach(node => {
-            if(node.label.element) {
-                node.label.element.addEventListener('click', () => {
-                    this._emit('node:click', node.v);
+        graphInstance.nodes.forEach((node, nodeId) => {
+            const element = node.label.element;
+            if (element && !this._clusters.has(nodeId)) {
+                element.addEventListener('click', () => {
+                    this._emit('node:click', nodeId);
                 });
             }
         });
         
-         graphInstance.edges.forEach(edge => {
-            if(edge.label.element) {
-                edge.label.element.addEventListener('click', () => {
+        graphInstance.edges.forEach(edge => {
+            const hitArea = edge.label.hitTest; 
+            if (hitArea) {
+                hitArea.addEventListener('click', () => {
                     this._emit('edge:click', { from: edge.v, to: edge.w });
                 });
             }
         });
     }
 
+    /** @private */
     _emit(event, data) {
         if (this._eventListeners.has(event)) {
             this._eventListeners.get(event).forEach(callback => callback(data));

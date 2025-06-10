@@ -1,139 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
-    <title>GraphLibrary Usage Example</title>
+    <title>GraphLibrary - Web Architecture Example</title>
     <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          "Helvetica Neue", Arial, sans-serif;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin: 20px;
-        background-color: #f7f7f7;
-      }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+            background-color: #f0f2f5;
+            color: #333;
+        }
 
-      h1 {
-        color: #333;
-      }
+        h1 {
+            color: #111;
+        }
 
-      /* The container for our graph */
-      #graph-container {
-        width: 90vw;
-        max-width: 1000px;
-        height: 600px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background-color: #fff;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        overflow: auto; /* Allows panning if graph is larger than container */
-      }
+        #graph-container {
+            width: 95vw;
+            max-width: 1200px;
+            height: 750px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            overflow: auto;
+        }
+        
+        #event-output {
+            margin-top: 15px;
+            padding: 8px 12px;
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            border-radius: 4px;
+        }
 
-      /* --- Custom Styles for Graph Nodes and Edges --- */
-      /* These styles are applied via the 'styleClass' property in the node/edge options */
+        /* --- Custom Styles for Graph Elements via styleClass --- */
 
-      .node.start-node .node-item-type {
-        fill: #e6f7ff; /* Light blue background */
-      }
-      .node.start-node .node-border {
-        stroke: #1890ff; /* Blue border */
-        stroke-width: 2px;
-      }
+        /* Nodes */
+        .node.public-facing .node-item-type { fill: #fffbe6; }
+        .node.public-facing .node-border { stroke: #faad14; stroke-width: 2px; }
 
-      .node.end-node .node-item-type {
-        fill: #f6ffed; /* Light green background */
-      }
-      .node.end-node .node-border {
-        stroke: #52c41a; /* Green border */
-        stroke-width: 2px;
-      }
+        .node.service-node .node-item-type { fill: #f0f5ff; }
+        .node.service-node .node-border { stroke: #adc6ff; stroke-width: 1.5px; }
+        
+        .node.db-node .node-item-type { fill: #e6fffb; }
+        .node.db-node .node-border { stroke: #87e8de; stroke-width: 2px; }
+        
+        /* Edges */
+        .edge-path.high-traffic { stroke: #f5222d; stroke-width: 2.5px; }
+        .edge-path.db-replication { stroke: #597ef7; stroke-dasharray: 5, 5; }
 
-      .edge-path.critical-path {
-        stroke: #cf1322; /* Red color for the edge path */
-        stroke-width: 2.5px;
-      }
     </style>
-  </head>
-  <body>
-    <h1>Data Processing Workflow</h1>
+</head>
+<body>
+    <h1>Web Application Architecture</h1>
     <div id="graph-container"></div>
+    <p id="event-output">Click on a node or an edge to see details here.</p>
 
     <script type="module">
-      import { GraphLibrary } from "./graph.js";
+        import { GraphLibrary } from "./graph.js";
 
-      // 1. Get the container element for the graph
-      const container = document.getElementById("graph-container");
+        // 1. Get container and output elements
+        const container = document.getElementById("graph-container");
+        const output = document.getElementById("event-output");
 
-      // 2. Initialize the Graph Library
-      // We'll create a Left-to-Right (LR) layout
-      const graph = new GraphLibrary(container, {
-        direction: "LR",
-        rankSep: 70, // Increase separation between layers
-      });
+        // 2. Initialize Graph Library with a Left-to-Right layout
+        const graph = new GraphLibrary(container, {
+            direction: "LR",
+            rankSep: 80,
+            nodeSep: 60,
+        });
 
-      // 3. Add Clusters (for grouping nodes)
-      graph.addCluster({
-        id: "processing_cluster",
-        label: "Data Transformation",
-        style: { backgroundColor: "rgba(255, 230, 204, 0.5)" },
-      });
+        // 3. Add Clusters (for grouping)
+        graph.addCluster({
+            id: 'frontend_cluster',
+            label: 'Frontend Services',
+            style: { backgroundColor: 'rgba(250, 173, 20, 0.1)', rx: 10, ry: 10 }
+        });
+        graph.addCluster({
+            id: 'backend_cluster',
+            label: 'Backend Services',
+            style: { backgroundColor: 'rgba(89, 126, 247, 0.1)', rx: 10, ry: 10 }
+        });
+        graph.addCluster({
+            id: 'db_cluster',
+            label: 'Database Layer',
+            parent: 'backend_cluster',
+            style: { backgroundColor: 'rgba(135, 232, 222, 0.2)', rx: 5, ry: 5 }
+        });
 
-      // 4. Add Nodes to the graph
-      graph.addNode({
-        id: "input",
-        label: "Data Input",
-        styleClass: "start-node", // Apply custom CSS
-      });
-      graph.addNode({
-        id: "validate",
-        label: "Validate Data",
-        parent: "processing_cluster", // Place this node inside the cluster
-      });
-      graph.addNode({
-        id: "transform",
-        label: "Transform Data",
-        parent: "processing_cluster", // And this one too
-      });
-      graph.addNode({
-        id: "store",
-        label: "Store in DB",
-        styleClass: "end-node", // Apply custom CSS
-      });
-      graph.addNode({
-        id: "archive",
-        label: "Archive Raw Data",
-        styleClass: "end-node",
-      });
+        // 4. Add Nodes
+        graph.addNode({ id: 'user', label: 'User Browser', styleClass: 'public-facing' });
+        graph.addNode({ id: 'lb', label: 'Load Balancer', parent: 'frontend_cluster', styleClass: 'public-facing' });
+        
+        graph.addNode({ id: 'web1', label: 'Web Server 1', parent: 'frontend_cluster', style: { backgroundColor: '#fff' } });
+        graph.addNode({ id: 'web2', label: 'Web Server 2', parent: 'frontend_cluster', style: { backgroundColor: '#fff' } });
+        
+        graph.addNode({ id: 'api_gateway', label: 'API Gateway', parent: 'backend_cluster', styleClass: 'service-node' });
+        graph.addNode({ id: 'auth_service', label: 'Auth Service', parent: 'backend_cluster', styleClass: 'service-node' });
+        graph.addNode({ id: 'data_service', label: 'Data Service', parent: 'backend_cluster', styleClass: 'service-node' });
+        
+        graph.addNode({ id: 'primary_db', label: 'Primary DB', parent: 'db_cluster', styleClass: 'db-node' });
+        graph.addNode({ id: 'replica_db', label: 'Read Replica', parent: 'db_cluster', styleClass: 'db-node' });
+        
+        // 5. Add Edges
+        graph.addEdge({ from: 'user', to: 'lb', label: 'HTTP/S', styleClass: 'high-traffic' });
+        graph.addEdge({ from: 'lb', to: 'web1' });
+        graph.addEdge({ from: 'lb', to: 'web2' });
 
-      // 5. Add Edges to connect the nodes
-      graph.addEdge({ from: "input", to: "validate" });
-      graph.addEdge({ from: "validate", to: "transform", label: "Valid" });
-      graph.addEdge({ from: "transform", to: "store" });
+        graph.addEdge({ from: 'web1', to: 'api_gateway', label: 'API Call' });
+        graph.addEdge({ from: 'web2', to: 'api_gateway', label: 'API Call' });
 
-      // Example of a differently styled edge
-      graph.addEdge({
-        from: "input",
-        to: "archive",
-        label: "Archive Copy",
-        styleClass: "critical-path",
-      });
+        graph.addEdge({ from: 'api_gateway', to: 'auth_service', label: 'Verifies Token' });
+        graph.addEdge({ from: 'api_gateway', to: 'data_service', label: 'Forwards Request' });
 
-      // 6. Set up Event Listeners
-      graph.on("node:click", (nodeId) => {
-        alert(`You clicked on Node: ${nodeId}`);
-        console.log(`Node with ID '${nodeId}' was clicked.`);
-      });
-      graph.on("edge:click", (edge) => {
-        alert(`You clicked on the edge from ${edge.from} to ${edge.to}`);
-        console.log("Edge clicked:", edge);
-      });
+        graph.addEdge({ from: 'data_service', to: 'primary_db', label: 'Write' });
+        graph.addEdge({ from: 'data_service', to: 'replica_db', label: 'Read' });
+        graph.addEdge({ from: 'primary_db', to: 'replica_db', label: 'Replication', styleClass: 'db-replication' });
 
-      // 7. Render the graph
-      // This process is asynchronous as it might involve complex layout calculations
-      graph.render().then(() => {
-        console.log("Graph rendering complete!");
-      });
+        // 6. Set up Event Listeners
+        graph.on('node:click', (nodeId) => {
+            const node = graph._nodes.get(nodeId);
+            const message = `Node Clicked: ${node.label} (ID: ${nodeId})`;
+            output.textContent = message;
+            console.log(message, node);
+        });
+
+        graph.on('edge:click', (edge) => {
+            const message = `Edge Clicked: From '${edge.from}' to '${edge.to}'`;
+            output.textContent = message;
+            console.log(message, edge);
+        });
+
+        // 7. Render the graph asynchronously
+        graph.render().then(() => {
+            console.log("Graph rendering complete!");
+        }).catch(error => {
+            console.error("Failed to render graph:", error);
+        });
+
     </script>
-  </body>
+</body>
 </html>
