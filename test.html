@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>GraphLibrary Usage Example</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 20px;
+        background-color: #f7f7f7;
+      }
+
+      h1 {
+        color: #333;
+      }
+
+      /* The container for our graph */
+      #graph-container {
+        width: 90vw;
+        max-width: 1000px;
+        height: 600px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        overflow: auto; /* Allows panning if graph is larger than container */
+      }
+
+      /* --- Custom Styles for Graph Nodes and Edges --- */
+      /* These styles are applied via the 'styleClass' property in the node/edge options */
+
+      .node.start-node .node-item-type {
+        fill: #e6f7ff; /* Light blue background */
+      }
+      .node.start-node .node-border {
+        stroke: #1890ff; /* Blue border */
+        stroke-width: 2px;
+      }
+
+      .node.end-node .node-item-type {
+        fill: #f6ffed; /* Light green background */
+      }
+      .node.end-node .node-border {
+        stroke: #52c41a; /* Green border */
+        stroke-width: 2px;
+      }
+
+      .edge-path.critical-path {
+        stroke: #cf1322; /* Red color for the edge path */
+        stroke-width: 2.5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Data Processing Workflow</h1>
+    <div id="graph-container"></div>
+
+    <script type="module">
+      import { GraphLibrary } from "./graph.js";
+
+      // 1. Get the container element for the graph
+      const container = document.getElementById("graph-container");
+
+      // 2. Initialize the Graph Library
+      // We'll create a Left-to-Right (LR) layout
+      const graph = new GraphLibrary(container, {
+        direction: "LR",
+        rankSep: 70, // Increase separation between layers
+      });
+
+      // 3. Add Clusters (for grouping nodes)
+      graph.addCluster({
+        id: "processing_cluster",
+        label: "Data Transformation",
+        style: { backgroundColor: "rgba(255, 230, 204, 0.5)" },
+      });
+
+      // 4. Add Nodes to the graph
+      graph.addNode({
+        id: "input",
+        label: "Data Input",
+        styleClass: "start-node", // Apply custom CSS
+      });
+      graph.addNode({
+        id: "validate",
+        label: "Validate Data",
+        parent: "processing_cluster", // Place this node inside the cluster
+      });
+      graph.addNode({
+        id: "transform",
+        label: "Transform Data",
+        parent: "processing_cluster", // And this one too
+      });
+      graph.addNode({
+        id: "store",
+        label: "Store in DB",
+        styleClass: "end-node", // Apply custom CSS
+      });
+      graph.addNode({
+        id: "archive",
+        label: "Archive Raw Data",
+        styleClass: "end-node",
+      });
+
+      // 5. Add Edges to connect the nodes
+      graph.addEdge({ from: "input", to: "validate" });
+      graph.addEdge({ from: "validate", to: "transform", label: "Valid" });
+      graph.addEdge({ from: "transform", to: "store" });
+
+      // Example of a differently styled edge
+      graph.addEdge({
+        from: "input",
+        to: "archive",
+        label: "Archive Copy",
+        styleClass: "critical-path",
+      });
+
+      // 6. Set up Event Listeners
+      graph.on("node:click", (nodeId) => {
+        alert(`You clicked on Node: ${nodeId}`);
+        console.log(`Node with ID '${nodeId}' was clicked.`);
+      });
+      graph.on("edge:click", (edge) => {
+        alert(`You clicked on the edge from ${edge.from} to ${edge.to}`);
+        console.log("Edge clicked:", edge);
+      });
+
+      // 7. Render the graph
+      // This process is asynchronous as it might involve complex layout calculations
+      graph.render().then(() => {
+        console.log("Graph rendering complete!");
+      });
+    </script>
+  </body>
+</html>
