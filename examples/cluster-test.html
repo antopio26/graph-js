@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>GraphLibrary - Web Architecture Example</title>
+    <link rel="stylesheet" href="../source/css/grapher.css" />
+
+</head>
+<body>
+    <h1>Web Application Architecture</h1>
+
+    <div id="controls">
+        <button id="toggle-layout-btn">Visualize Horizontally</button>
+    </div>
+
+    <div id="graph-container"></div>
+    <p id="event-output">Click on a node or an edge to see details here.</p>
+
+    <script type="module">
+        import { GraphLibrary } from "../source/graph.js";
+
+        // --- DOM Elements ---
+        const container = document.getElementById("graph-container");
+        const output = document.getElementById("event-output");
+        const toggleBtn = document.getElementById("toggle-layout-btn");
+
+        // --- Graph Definition Data ---
+        const clusterData = [
+            { id: 'frontend_cluster', label: 'Frontend Services', style: { backgroundColor: 'rgba(250, 173, 20, 0.1)', rx: 10, ry: 10 } },
+            { id: 'backend_cluster', label: 'Backend Services', style: { backgroundColor: 'rgba(89, 126, 247, 0.1)', rx: 10, ry: 10 } },
+            { id: 'db_cluster', label: 'Database Layer', parent: 'backend_cluster', style: { backgroundColor: 'rgba(135, 232, 222, 0.2)', rx: 5, ry: 5 } }
+        ];
+        const nodeData = [
+            { id: 'user', label: 'User Browser', styleClass: 'public-facing' },
+            { id: 'lb', label: 'Load Balancer', parent: 'frontend_cluster', styleClass: 'public-facing' },
+            { id: 'web1', label: 'Web Server 1', parent: 'frontend_cluster', style: { backgroundColor: '#fff' } },
+            { id: 'web2', label: 'Web Server 2', parent: 'frontend_cluster', style: { backgroundColor: '#fff' } },
+            { id: 'api_gateway', label: 'API Gateway', parent: 'backend_cluster', styleClass: 'service-node' },
+            { id: 'auth_service', label: 'Auth Service', parent: 'backend_cluster', styleClass: 'service-node' },
+            { id: 'data_service', label: 'Data Service', parent: 'backend_cluster', styleClass: 'service-node' },
+            { id: 'primary_db', label: 'Primary DB', parent: 'db_cluster', styleClass: 'db-node' },
+            { id: 'replica_db', label: 'Read Replica', parent: 'db_cluster', styleClass: 'db-node' }
+        ];
+        const edgeData = [
+            { from: 'user', to: 'lb', label: 'HTTP/S', styleClass: 'high-traffic' },
+            { from: 'lb', to: 'web1' },
+            { from: 'lb', to: 'web2' },
+            { from: 'web1', to: 'api_gateway', label: 'API Call' },
+            { from: 'web2', to: 'api_gateway', label: 'API Call' },
+            { from: 'api_gateway', to: 'auth_service', label: 'Verifies Token' },
+            { from: 'api_gateway', to: 'data_service', label: 'Forwards Request' },
+            { from: 'data_service', to: 'primary_db', label: 'Write' },
+            { from: 'data_service', to: 'replica_db', label: 'Read' },
+            { from: 'primary_db', to: 'replica_db', label: 'Replication', styleClass: 'db-replication' }
+        ];
+        const nodeMap = new Map(nodeData.map(n => [n.id, n]));
+
+        // --- State ---
+        let isLayoutVertical = true;
+
+        /**
+         * Clears the container and renders the graph with a specific layout direction.
+         * @param {string} direction - The layout direction ('TB' or 'LR').
+         */
+        function drawGraph(direction) {
+            output.textContent = "Click on a node or an edge to see details here.";
+        
+            const graph = new GraphLibrary(container, {
+                direction: direction,
+                rankSep: 80,
+                nodeSep: 60,
+            });
+
+            clusterData.forEach(c => graph.addCluster(c));
+            nodeData.forEach(n => graph.addNode(n));
+            edgeData.forEach(e => graph.addEdge(e));
+
+            graph.on('node:click', (nodeId) => {
+                const node = nodeMap.get(nodeId);
+                const message = `Node Clicked: ${node.label} (ID: ${nodeId})`;
+                output.textContent = message;
+                console.log(message, node);
+            });
+
+            graph.on('edge:click', (edge) => {
+                const message = `Edge Clicked: From '${edge.from}' to '${edge.to}'`;
+                output.textContent = message;
+                console.log(message, edge);
+            });
+
+            graph.render().then(() => {
+                console.log(`Graph rendered with ${direction} layout.`);
+            }).catch(error => {
+                console.error("Failed to render graph:", error);
+            });
+        }
+        
+        // --- Event Listener for the button ---
+        toggleBtn.addEventListener('click', () => {
+            isLayoutVertical = !isLayoutVertical;
+            const newDirection = isLayoutVertical ? 'TB' : 'LR';
+            toggleBtn.textContent = isLayoutVertical ? 'Visualize Horizontally' : 'Visualize Vertically';
+            drawGraph(newDirection);
+});
+
+        // --- Initial Render ---
+        drawGraph('TB'); // Start with a vertical layout
+
+    </script>
+</body>
+</html>

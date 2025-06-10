@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>GraphLibrary - Simple Graph (No Clusters)</title>
+    <link rel="stylesheet" href="../source/css/grapher.css" />
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 20px;
+        background-color: #f0f2f5;
+      }
+      #graph-container {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background-color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Simple Graph Example</h1>
+
+    <div id="controls" style="margin-bottom: 15px">
+      <button id="toggle-layout-btn">Visualize Horizontally</button>
+    </div>
+
+    <div id="graph-container" style="width: 800px; height: 600px"></div>
+    <p id="event-output">Click on a node or an edge to see details here.</p>
+    <script type="module">
+      import { GraphLibrary } from "../source/graph.js";
+
+      // --- DOM Elements ---
+      const container = document.getElementById("graph-container");
+      const toggleBtn = document.getElementById("toggle-layout-btn");
+      const output = document.getElementById("event-output");
+
+      // --- Graph Definition Data (No Clusters) ---
+      const nodeData = [
+        { id: "a", label: "Start" },
+        { id: "b", label: "Process Data" },
+        { id: "c", label: "Generate Report" },
+        { id: "d", label: "End" },
+      ];
+      const edgeData = [
+        { from: "a", to: "b" },
+        { from: "b", to: "c", label: "Step 1" },
+        { from: "b", to: "d", label: "Step 2" },
+      ];
+
+      // --- State ---
+      let isLayoutVertical = true;
+
+      function drawGraph(direction) {
+        const graph = new GraphLibrary(container, {
+          direction: direction,
+          rankSep: 60,
+        });
+        output.textContent = "Click on a node or an edge to see details here.";
+
+        // Note: We are not calling addCluster() at all.
+        nodeData.forEach((n) => graph.addNode(n));
+        edgeData.forEach((e) => graph.addEdge(e));
+
+        graph.on("node:click", (nodeId) => {
+          const node = nodeData.find((n) => n.id === nodeId);
+          const message = `Node Clicked: ${node.label} (ID: ${nodeId})`;
+          console.log(message, node);
+          output.textContent = message;
+        });
+
+        graph.on("edge:click", (edge) => {
+          const message = `Edge Clicked: From '${edge.from}' to '${edge.to}'`;
+          output.textContent = message;
+          console.log(message, edge);
+        });
+
+        graph
+          .render()
+          .then(() => {
+            console.log(`Graph rendered with ${direction} layout.`);
+          })
+          .catch((error) => {
+            console.error("Failed to render graph:", error);
+          });
+      }
+
+      // --- Event Listener for the button ---
+      toggleBtn.addEventListener("click", () => {
+        isLayoutVertical = !isLayoutVertical;
+        const newDirection = isLayoutVertical ? "TB" : "LR";
+        toggleBtn.textContent = isLayoutVertical
+          ? "Visualize Horizontally"
+          : "Visualize Vertically";
+        drawGraph(newDirection);
+      });
+
+      // --- Initial Render ---
+      drawGraph("TB");
+    </script>
+  </body>
+</html>
