@@ -1,219 +1,250 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GraphLibrary - Neural Network Graph</title>
-    <link rel="stylesheet" href="../source/css/grapher.css"> <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f4f8;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-        }
+    <link rel="stylesheet" href="../source/css/grapher.css" />
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f0f4f8;
+        color: #333;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        padding: 20px;
+        line-height: 1.6;
+      }
 
-        h1 {
-            color: #2c3e50;
-        }
+      h1 {
+        color: #2c3e50;
+      }
 
-        #controls {
-            margin-bottom: 20px;
-            padding: 10px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
+      #controls {
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
 
-        #graph-container {
-            width: 90%;
-            max-width: 1000px;
-            min-height: 700px;
-            border: 1px solid #d1d9e0;
-            border-radius: 8px;
-            background-color: #ffffff;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            margin-top: 20px;
-            position: relative; /* For SVG fitting */
-        }
+      #graph-container {
+        width: 90%;
+        max-width: 1000px;
+        min-height: 700px;
+        border: 1px solid #d1d9e0;
+        border-radius: 8px;
+        background-color: #ffffff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        position: relative; /* For SVG fitting */
+      }
 
-        #event-log-container {
-            width: 90%;
-            max-width: 1000px;
-            margin-top: 25px;
-            background: #2f3640; /* Darker background for log */
-            color: #f5f6fa;
-            border-radius: 5px;
-            padding: 15px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9em;
-            height: 150px;
-            overflow-y: auto;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
+      #event-log-container {
+        width: 100%;
+        max-width: 1000px;
+        margin-top: 25px;
+        background: #2f3640; /* Darker background for log */
+        color: #f5f6fa;
+        border-radius: 5px;
+        padding: 15px;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 0.9em;
+        height: 150px;
+        overflow-y: auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
 
-        #event-log-container strong {
-            color: #7ed6df; /* A light accent for the title */
-        }
+      #event-log-container strong {
+        color: #7ed6df; /* A light accent for the title */
+      }
 
-        #event-log-output div {
-            padding: 3px 0;
-            border-bottom: 1px solid #4a5058;
-        }
-        #event-log-output div:last-child {
-            border-bottom: none;
-        }
+      #event-log-output div {
+        padding: 3px 0;
+        border-bottom: 1px solid #4a5058;
+      }
+      #event-log-output div:last-child {
+        border-bottom: none;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Neural Network Graph Showcase</h1>
     <p>
-        This example demonstrates rendering a neural network-style graph.
+      This example demonstrates rendering a neural network-style graph with
+      simplified layout options.
     </p>
 
     <div id="controls">
-        <button id="rerender-button">Re-Render Graph</button>
-        <label for="layout-direction">Layout:</label>
-        <select id="layout-direction">
-            <option value="TB" selected>Top-to-Bottom</option>
-            <option value="BT">Bottom-to-Top</option>
-            <option value="LR">Left-to-Right</option>
-            <option value="RL">Right-to-Left</option>
-        </select>
+      <label for="layout-direction">Layout:</label>
+      <select id="layout-direction">
+        <option value="TB" selected>Vertical</option>
+        <option value="LR">Horizontal</option>
+      </select>
     </div>
 
     <div id="graph-container"></div>
 
     <div id="event-log-container">
-        <strong>Event Log:</strong>
-        <div id="event-log-output"></div>
+      <strong>Event Log:</strong>
+      <div id="event-log-output"></div>
     </div>
 
     <script type="module">
-        import { GraphLibrary } from "../source/graph.js";
+      import { GraphLibrary } from "../source/graph.js";
 
-        const graphContainer = document.getElementById("graph-container");
-        const logOutput = document.getElementById("event-log-output");
-        const rerenderButton = document.getElementById("rerender-button");
-        const layoutDirectionSelect = document.getElementById("layout-direction");
+      const graphContainer = document.getElementById("graph-container");
+      const logOutput = document.getElementById("event-log-output");
+      const layoutDirectionSelect = document.getElementById("layout-direction");
 
-        function logEvent(message, data = null) {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = document.createElement("div");
-            logEntry.textContent = `[${timestamp}] ${message}`;
-            logOutput.prepend(logEntry);
-            if (data) {
-                console.log(`[Event] ${message}`, data);
-            }
+      function logEvent(message, data = null) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement("div");
+        logEntry.textContent = `[${timestamp}] ${message}`;
+        logOutput.prepend(logEntry);
+        if (data) {
+          console.log(`[Event] ${message}`, data);
         }
+      }
 
-        async function initializeAndRenderGraph() {
-            logEvent("Initializing graph...");
-            graphContainer.innerHTML = ''; // Clear previous graph
+      async function initializeAndRenderGraph() {
+        logEvent("Initializing graph...");
+        graphContainer.innerHTML = ""; // Clear previous graph
 
-            const currentLayoutDirection = layoutDirectionSelect.value;
+        const currentLayoutDirection = layoutDirectionSelect.value;
 
-            const graph = new GraphLibrary(graphContainer, {
-                direction: currentLayoutDirection,
-                nodeSep: 50,
-                rankSep: 60,
-                compound: false, // This graph does not use clusters
-            });
+        const graph = new GraphLibrary(graphContainer, {
+          direction: currentLayoutDirection,
+          nodeSep: 50,
+          rankSep: 60,
+          compound: false, // This graph does not use clusters
+        });
 
-            // --- Define Node Styles ---
-            const nodeStyles = {
-                op: { backgroundColor: '#f3f4f6', borderColor: '#d1d5db' },      // Grey
-                gemm: { backgroundColor: '#dbeafe', borderColor: '#93c5fd', argSeparator: ' ' },    // Blue
-                act: { backgroundColor: '#fee2e2', borderColor: '#fca5a5' },       // Red
-                data: { backgroundColor: '#dcfce7', borderColor: '#86efac' },      // Green
-                flatten: { backgroundColor: '#f5e5d5', borderColor: '#d1bfae' } // Brown
-            };
+        // --- Define Node Styles ---
+        const nodeStyles = {
+          op: { backgroundColor: "#f3f4f6", borderColor: "#d1d5db" }, // Grey
+          gemm: {
+            backgroundColor: "#dbeafe",
+            borderColor: "#93c5fd",
+            argSeparator: " ",
+          }, // Blue
+          act: { backgroundColor: "#fee2e2", borderColor: "#fca5a5" }, // Red
+          data: { backgroundColor: "#dcfce7", borderColor: "#86efac" }, // Green
+          flatten: { backgroundColor: "#f5e5d5", borderColor: "#d1bfae" }, // Brown
+        };
 
-            // --- Define Nodes ---
-            graph.addNode({ id: 'input', label: 'input', style: nodeStyles.op });
-            graph.addNode({ id: 'cast', label: 'Cast', style: nodeStyles.op });
-            graph.addNode({ id: 'flatten', label: 'Flatten', style: nodeStyles.flatten });
-            graph.addNode({
-                id: 'gemm1', label: 'Gemm', style: nodeStyles.gemm,
-                arguments: { 'B': '(256x63)', 'C': '(256)' }
-            });
-            graph.addNode({ id: 'relu1', label: 'Relu', style: nodeStyles.act });
-            graph.addNode({
-                id: 'gemm2', label: 'Gemm', style: nodeStyles.gemm,
-                arguments: { 'B': '(256x256)', 'C': '(256)' }
-            });
-            graph.addNode({ id: 'relu2', label: 'Relu', style: nodeStyles.act });
-            graph.addNode({
-                id: 'gemm3', label: 'Gemm', style: nodeStyles.gemm,
-                arguments: { 'B': '(12x256)', 'C': '(12)' }
-            });
-            graph.addNode({
-                id: 'clip', label: 'Clip', style: { ...nodeStyles.act, argSeparator: ' = ' },
-                arguments: { 'min': '-20', 'max': '2' }
-            });
-            graph.addNode({ id: 'exp', label: 'Exp', style: nodeStyles.op });
-            graph.addNode({
-                id: 'gemm4', label: 'Gemm', style: nodeStyles.gemm,
-                arguments: { 'B': '(12x256)', 'C': '(12)' }
-            });
-            graph.addNode({ id: 'shape1', label: 'Shape', style: nodeStyles.data });
-            graph.addNode({ id: 'const1', label: 'ConstantOfShape', style: nodeStyles.data });
-            graph.addNode({ id: 'shape2', label: 'Shape', style: nodeStyles.data });
-            graph.addNode({ id: 'const2', label: 'ConstantOfShape', style: nodeStyles.data });
+        // --- Define Nodes ---
+        graph.addNode({ id: "input", label: "input", style: nodeStyles.op });
+        graph.addNode({ id: "cast", label: "Cast", style: nodeStyles.op });
+        graph.addNode({
+          id: "flatten",
+          label: "Flatten",
+          style: nodeStyles.flatten,
+        });
+        graph.addNode({
+          id: "gemm1",
+          label: "Gemm",
+          style: nodeStyles.gemm,
+          arguments: { B: "(256x63)", C: "(256)" },
+        });
+        graph.addNode({ id: "relu1", label: "Relu", style: nodeStyles.act });
+        graph.addNode({
+          id: "gemm2",
+          label: "Gemm",
+          style: nodeStyles.gemm,
+          arguments: { B: "(256x256)", C: "(256)" },
+        });
+        graph.addNode({ id: "relu2", label: "Relu", style: nodeStyles.act });
+        graph.addNode({
+          id: "gemm3",
+          label: "Gemm",
+          style: nodeStyles.gemm,
+          arguments: { B: "(12x256)", C: "(12)" },
+        });
+        graph.addNode({
+          id: "clip",
+          label: "Clip",
+          style: { ...nodeStyles.act, argSeparator: " = " },
+          arguments: { min: "-20", max: "2" },
+        });
+        graph.addNode({ id: "exp", label: "Exp", style: nodeStyles.op });
+        graph.addNode({
+          id: "gemm4",
+          label: "Gemm",
+          style: nodeStyles.gemm,
+          arguments: { B: "(12x256)", C: "(12)" },
+        });
+        graph.addNode({ id: "shape1", label: "Shape", style: nodeStyles.data });
+        graph.addNode({
+          id: "const1",
+          label: "ConstantOfShape",
+          style: nodeStyles.data,
+        });
+        graph.addNode({ id: "shape2", label: "Shape", style: nodeStyles.data });
+        graph.addNode({
+          id: "const2",
+          label: "ConstantOfShape",
+          style: nodeStyles.data,
+        });
 
-            // --- Define Edges ---
-            graph.addEdge({ from: 'input', to: 'cast', label: 'batch_sizex63' });
-            graph.addEdge({ from: 'cast', to: 'flatten' });
-            graph.addEdge({ from: 'flatten', to: 'gemm1' });
-            graph.addEdge({ from: 'gemm1', to: 'relu1' });
-            graph.addEdge({ from: 'relu1', to: 'gemm2' });
-            graph.addEdge({ from: 'gemm2', to: 'relu2' });
-            graph.addEdge({ from: 'relu2', to: 'gemm3' });
-            graph.addEdge({ from: 'relu2', to: 'gemm4' });
-            graph.addEdge({ from: 'gemm3', to: 'clip' });
-            graph.addEdge({ from: 'clip', to: 'exp' });
-            graph.addEdge({ from: 'exp', to: 'gemm4' });
-            graph.addEdge({ from: 'gemm3', to: 'shape1' });
-            graph.addEdge({ from: 'gemm4', to: 'shape2' });
-            graph.addEdge({ from: 'shape1', to: 'const1' });
-            graph.addEdge({ from: 'shape2', to: 'const2' });
-            graph.addEdge({ from: 'const1', to: 'gemm4' });
-            graph.addEdge({ from: 'const2', to: 'gemm3' });
+        // --- Define Edges ---
+        graph.addEdge({ from: "input", to: "cast", label: "batch_sizex63" });
+        graph.addEdge({ from: "cast", to: "flatten" });
+        graph.addEdge({ from: "flatten", to: "gemm1" });
+        graph.addEdge({ from: "gemm1", to: "relu1" });
+        graph.addEdge({ from: "relu1", to: "gemm2" });
+        graph.addEdge({ from: "gemm2", to: "relu2" });
+        graph.addEdge({ from: "relu2", to: "gemm3" });
+        graph.addEdge({ from: "relu2", to: "gemm4" });
+        graph.addEdge({ from: "gemm3", to: "clip" });
+        graph.addEdge({ from: "clip", to: "exp" });
+        graph.addEdge({ from: "exp", to: "gemm4" });
+        graph.addEdge({ from: "gemm3", to: "shape1" });
+        graph.addEdge({ from: "gemm4", to: "shape2" });
+        graph.addEdge({ from: "shape1", to: "const1" });
+        graph.addEdge({ from: "shape2", to: "const2" });
+        graph.addEdge({ from: "const1", to: "gemm4" });
+        graph.addEdge({ from: "const2", to: "gemm3" });
 
-            // --- Event Handling ---
-            graph.on("node:click", (nodeId) => {
-                logEvent(`Node clicked: ${nodeId}`);
-            });
+        // --- Event Handling ---
+        graph.on("node:click", (nodeId) => {
+          logEvent(`Node clicked: ${nodeId}`);
+        });
 
-            graph.on("edge:click", (edgeInfo) => {
-                logEvent(`Edge clicked: from '${edgeInfo.from}' to '${edgeInfo.to}'`);
-            });
-            
-            graph.on("node:argument:click", (argData) => {
-                logEvent(`Argument clicked on node '${argData.nodeId}': Name='${argData.name}', Value='${argData.value}'`, argData);
-            });
+        graph.on("edge:click", (edgeInfo) => {
+          logEvent(`Edge clicked: from '${edgeInfo.from}' to '${edgeInfo.to}'`);
+        });
 
-            // --- Render the Graph ---
-            try {
-                logEvent(`Rendering graph with layout: ${currentLayoutDirection}`);
-                await graph.render();
-                logEvent("Graph rendered successfully.");
-            } catch (error) {
-                logEvent(`Error rendering graph: ${error.message}`, error);
-                console.error("Rendering error:", error);
-            }
+        graph.on("node:argument:click", (argData) => {
+          logEvent(
+            `Argument clicked on node '${argData.nodeId}': Name='${argData.name}', Value='${argData.value}'`,
+            argData
+          );
+        });
+
+        // --- Render the Graph ---
+        try {
+          logEvent(`Rendering graph with layout: ${currentLayoutDirection}`);
+          await graph.render();
+          logEvent("Graph rendered successfully.");
+        } catch (error) {
+          logEvent(`Error rendering graph: ${error.message}`, error);
+          console.error("Rendering error:", error);
         }
+      }
 
-        // --- Event Listeners for Controls ---
-        rerenderButton.addEventListener("click", initializeAndRenderGraph);
-        layoutDirectionSelect.addEventListener("change", initializeAndRenderGraph);
+      // --- Event Listeners for Controls ---
+      layoutDirectionSelect.addEventListener(
+        "change",
+        initializeAndRenderGraph
+      );
 
-        // --- Initial Render ---
-        initializeAndRenderGraph();
+      // --- Initial Render ---
+      initializeAndRenderGraph();
     </script>
-</body>
+  </body>
 </html>

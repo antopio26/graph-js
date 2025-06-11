@@ -244,8 +244,14 @@ export class GraphLibrary {
         });
 
         // 5. Configure grapher.Graph options for its internal layout process
+        // Workaround for the layout logic bug in grapher.js
+        let grapherLayoutDirection = this.options.direction;
+        if (this.options.direction === 'TB' || this.options.direction === 'BT') {
+            grapherLayoutDirection = 'vertical';
+        }
+
         this.grapherInstance.options = {
-            direction: this.options.direction,
+            direction: grapherLayoutDirection,
             // dagre specific options that grapher.Graph.layout might use:
             nodesep: this.options.nodeSep,
             ranksep: this.options.rankSep,
