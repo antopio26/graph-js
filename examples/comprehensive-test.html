@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GraphLibrary - Comprehensive Showcase</title>
-    <link rel="stylesheet" href="../source/css/grapher.css"> <!-- Basic grapher styles -->
-    <style>
+    <title>GraphLibrary - Neural Network Graph</title>
+    <link rel="stylesheet" href="../source/css/grapher.css"> <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f0f4f8;
@@ -18,7 +17,7 @@
             line-height: 1.6;
         }
 
-        h1, h2 {
+        h1 {
             color: #2c3e50;
         }
 
@@ -33,7 +32,7 @@
         #graph-container {
             width: 90%;
             max-width: 1000px;
-            min-height: 500px;
+            min-height: 700px;
             border: 1px solid #d1d9e0;
             border-radius: 8px;
             background-color: #ffffff;
@@ -52,7 +51,7 @@
             padding: 15px;
             font-family: 'Courier New', Courier, monospace;
             font-size: 0.9em;
-            height: 200px;
+            height: 150px;
             overflow-y: auto;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         }
@@ -68,52 +67,12 @@
         #event-log-output div:last-child {
             border-bottom: none;
         }
-
-        /* --- Custom Styles for Graph Elements --- */
-
-        /* Style for nodes with 'critical-node' class */
-        .critical-node .node-item { /* Targets the header entry's path */
-            fill: #ffeded; /* Light red background */
-            stroke: #e74c3c; /* Red border */
-        }
-        .critical-node .node-label text { /* Targets the text within the header entry */
-            fill: #c0392b; /* Darker red text */
-            font-weight: bold;
-        }
-
-        /* Style for clusters with 'department-cluster' class */
-        .department-cluster > rect { /* Targets the cluster's background rectangle */
-            stroke: #3498db;      /* Blue border */
-            stroke-width: 2px;
-            stroke-dasharray: 8, 4;
-            fill: rgba(52, 152, 219, 0.05); /* Light blue fill */
-        }
-        .department-cluster > .cluster-label { /* Targets the text label added to the cluster */
-            fill: #2980b9;
-            font-size: 1.1em;
-            font-weight: bold;
-        }
-
-
-        /* Style for edges with 'data-flow-edge' class */
-        .data-flow-edge { /* Targets the main edge path */
-            stroke: #2ecc71; /* Green stroke */
-            stroke-width: 2.5px;
-        }
-        .data-flow-edge path { /* Targets the arrowhead path */
-            fill: #27ae60; /* Darker green for arrowhead */
-        }
-        .edge-label { /* General style for edge labels */
-            font-size: 0.85em;
-            fill: #555;
-        }
     </style>
 </head>
 <body>
-    <h1>GraphLibrary: Comprehensive Feature Showcase</h1>
+    <h1>Neural Network Graph Showcase</h1>
     <p>
-        This example demonstrates various features of the <code>GraphLibrary</code>,
-        including nodes, clusters, arguments, styling, and event handling.
+        This example demonstrates rendering a neural network-style graph.
     </p>
 
     <div id="controls">
@@ -147,7 +106,9 @@
             const logEntry = document.createElement("div");
             logEntry.textContent = `[${timestamp}] ${message}`;
             logOutput.prepend(logEntry);
-            console.log(`[Event] ${message}`, data);
+            if (data) {
+                console.log(`[Event] ${message}`, data);
+            }
         }
 
         async function initializeAndRenderGraph() {
@@ -157,141 +118,83 @@
             const currentLayoutDirection = layoutDirectionSelect.value;
 
             const graph = new GraphLibrary(graphContainer, {
-                direction: currentLayoutDirection, // e.g., 'TB', 'LR'
-                nodeSep: 70,    // Separation between nodes in the same rank
-                rankSep: 100,   // Separation between ranks (layers)
-                compound: true, // Enable clusters
+                direction: currentLayoutDirection,
+                nodeSep: 50,
+                rankSep: 60,
+                compound: false, // This graph does not use clusters
             });
 
-            // --- Define Clusters ---
-            graph.addCluster({
-                id: "tech_department",
-                label: "Technology Department",
-                styleClass: "department-cluster", // Custom CSS class for styling
-                style: {
-                    // backgroundColor: "rgba(142, 68, 173, 0.05)", // Example inline style
-                    rx: 15, // Rounded corners for the cluster rectangle
-                    ry: 15,
-                }
-            });
-
-            graph.addCluster({
-                id: "dev_team",
-                label: "Development Team",
-                parent: "tech_department", // Nested cluster
-                style: {
-                    backgroundColor: "rgba(26, 188, 156, 0.1)",
-                    rx: 8,
-                    ry: 8,
-                }
-            });
-
-            graph.addCluster({
-                id: "qa_team",
-                label: "QA Team",
-                parent: "tech_department",
-                style: {
-                    backgroundColor: "rgba(241, 196, 15, 0.1)",
-                    rx: 8,
-                    ry: 8,
-                }
-            });
+            // --- Define Node Styles ---
+            const nodeStyles = {
+                op: { backgroundColor: '#f3f4f6', borderColor: '#d1d5db' },      // Grey
+                gemm: { backgroundColor: '#dbeafe', borderColor: '#93c5fd', argSeparator: ' ' },    // Blue
+                act: { backgroundColor: '#fee2e2', borderColor: '#fca5a5' },       // Red
+                data: { backgroundColor: '#dcfce7', borderColor: '#86efac' },      // Green
+                flatten: { backgroundColor: '#f5e5d5', borderColor: '#d1bfae' } // Brown
+            };
 
             // --- Define Nodes ---
+            graph.addNode({ id: 'input', label: 'input', style: nodeStyles.op });
+            graph.addNode({ id: 'cast', label: 'Cast', style: nodeStyles.op });
+            graph.addNode({ id: 'flatten', label: 'Flatten', style: nodeStyles.flatten });
             graph.addNode({
-                id: "ceo",
-                label: "CEO",
-                style: { backgroundColor: "#d1e9ff", borderColor: "#73b9ff" } // Header entry styling
+                id: 'gemm1', label: 'Gemm', style: nodeStyles.gemm,
+                arguments: { 'B': '(256x63)', 'C': '(256)' }
             });
-
+            graph.addNode({ id: 'relu1', label: 'Relu', style: nodeStyles.act });
             graph.addNode({
-                id: "cto",
-                label: "CTO",
-                parent: "tech_department",
-                styleClass: "critical-node", // Custom CSS class
-                arguments: {
-                    "Responsibilities": "Oversee Tech Strategy",
-                    "Reports To": "CEO"
-                }
+                id: 'gemm2', label: 'Gemm', style: nodeStyles.gemm,
+                arguments: { 'B': '(256x256)', 'C': '(256)' }
             });
-
+            graph.addNode({ id: 'relu2', label: 'Relu', style: nodeStyles.act });
             graph.addNode({
-                id: "dev_lead",
-                label: "Development Lead",
-                parent: "dev_team",
-                arguments: {
-                    "Team Size": "5",
-                    "Current Sprint": "Sprint #23"
-                }
+                id: 'gemm3', label: 'Gemm', style: nodeStyles.gemm,
+                arguments: { 'B': '(12x256)', 'C': '(12)' }
             });
-
             graph.addNode({
-                id: "frontend_dev",
-                label: "Frontend Developer",
-                parent: "dev_team",
-                arguments: { "Stack": "React, TypeScript" }
+                id: 'clip', label: 'Clip', style: { ...nodeStyles.act, argSeparator: ' = ' },
+                arguments: { 'min': '-20', 'max': '2' }
             });
-
+            graph.addNode({ id: 'exp', label: 'Exp', style: nodeStyles.op });
             graph.addNode({
-                id: "backend_dev",
-                label: "Backend Developer",
-                parent: "dev_team",
-                arguments: { "Stack": "Node.js, Python" }
+                id: 'gemm4', label: 'Gemm', style: nodeStyles.gemm,
+                arguments: { 'B': '(12x256)', 'C': '(12)' }
             });
-
-            graph.addNode({
-                id: "qa_lead",
-                label: "QA Lead",
-                parent: "qa_team",
-                arguments: { "Focus": "Automation & Manual" }
-            });
-
-            graph.addNode({
-                id: "manual_tester",
-                label: "Manual Tester",
-                parent: "qa_team",
-            });
-            
-            graph.addNode({
-                id: "automation_engineer",
-                label: "Automation Engineer",
-                parent: "qa_team",
-                style: { backgroundColor: "#e8f5e9", borderColor: "#a5d6a7" }
-            });
-
-            graph.addNode({
-                id: "external_service_A",
-                label: "External API Partner A",
-                // No parent, top-level node
-            });
-
+            graph.addNode({ id: 'shape1', label: 'Shape', style: nodeStyles.data });
+            graph.addNode({ id: 'const1', label: 'ConstantOfShape', style: nodeStyles.data });
+            graph.addNode({ id: 'shape2', label: 'Shape', style: nodeStyles.data });
+            graph.addNode({ id: 'const2', label: 'ConstantOfShape', style: nodeStyles.data });
 
             // --- Define Edges ---
-            graph.addEdge({ from: "ceo", to: "cto", label: "Manages" });
-            graph.addEdge({ from: "cto", to: "dev_lead", label: "Directs" });
-            graph.addEdge({ from: "cto", to: "qa_lead", label: "Directs" });
-
-            graph.addEdge({ from: "dev_lead", to: "frontend_dev", label: "Assigns Tasks" });
-            graph.addEdge({ from: "dev_lead", to: "backend_dev", label: "Assigns Tasks" });
-            
-            graph.addEdge({ from: "qa_lead", to: "manual_tester", label: "Coordinates" });
-            graph.addEdge({ from: "qa_lead", to: "automation_engineer", label: "Coordinates" });
-
-            // Edge crossing cluster boundaries (implicitly)
-            graph.addEdge({ from: "frontend_dev", to: "external_service_A", label: "Integrates With", styleClass: "data-flow-edge" });
-            graph.addEdge({ from: "backend_dev", to: "external_service_A", label: "Consumes Data", styleClass: "data-flow-edge" });
-
-            // Edge between nodes in different sub-clusters of the same parent
-            graph.addEdge({ from: "backend_dev", to: "automation_engineer", label: "Provides Test Builds" });
-
+            graph.addEdge({ from: 'input', to: 'cast', label: 'batch_sizex63' });
+            graph.addEdge({ from: 'cast', to: 'flatten' });
+            graph.addEdge({ from: 'flatten', to: 'gemm1' });
+            graph.addEdge({ from: 'gemm1', to: 'relu1' });
+            graph.addEdge({ from: 'relu1', to: 'gemm2' });
+            graph.addEdge({ from: 'gemm2', to: 'relu2' });
+            graph.addEdge({ from: 'relu2', to: 'gemm3' });
+            graph.addEdge({ from: 'relu2', to: 'gemm4' });
+            graph.addEdge({ from: 'gemm3', to: 'clip' });
+            graph.addEdge({ from: 'clip', to: 'exp' });
+            graph.addEdge({ from: 'exp', to: 'gemm4' });
+            graph.addEdge({ from: 'gemm3', to: 'shape1' });
+            graph.addEdge({ from: 'gemm4', to: 'shape2' });
+            graph.addEdge({ from: 'shape1', to: 'const1' });
+            graph.addEdge({ from: 'shape2', to: 'const2' });
+            graph.addEdge({ from: 'const1', to: 'gemm4' });
+            graph.addEdge({ from: 'const2', to: 'gemm3' });
 
             // --- Event Handling ---
             graph.on("node:click", (nodeId) => {
-                logEvent(`Node clicked: ${nodeId}`, graph._nodes.get(nodeId) || graph._clusters.get(nodeId));
+                logEvent(`Node clicked: ${nodeId}`);
             });
 
             graph.on("edge:click", (edgeInfo) => {
-                logEvent(`Edge clicked: from '${edgeInfo.from}' to '${edgeInfo.to}' (Label: ${edgeInfo.label || 'N/A'})`, edgeInfo);
+                logEvent(`Edge clicked: from '${edgeInfo.from}' to '${edgeInfo.to}'`);
+            });
+            
+            graph.on("node:argument:click", (argData) => {
+                logEvent(`Argument clicked on node '${argData.nodeId}': Name='${argData.name}', Value='${argData.value}'`, argData);
             });
 
             // --- Render the Graph ---

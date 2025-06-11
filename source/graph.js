@@ -63,10 +63,11 @@ export class GraphLibrary {
      * @param {object} [nodeOpts.style] - Styling options.
      * @param {string} [nodeOpts.style.backgroundColor] - Background color for the node's header.
      * @param {string} [nodeOpts.style.borderColor] - Border color for the node's header.
+     * @param {string} [nodeOpts.style.argSeparator] - Separator for arguments, e.g., ' ' or ' = '.
      * @param {number} [nodeOpts.style.width] - Initial width for layout. `grapher.Node.measure()` will override.
      * @param {number} [nodeOpts.style.height] - Initial height for layout. `grapher.Node.measure()` will override.
      * @param {object} [nodeOpts.arguments] - Key-value pairs for arguments. Values can be strings,
-     *                                        `grapher.Node` instances, or arrays of `grapher.Node`.
+     * `grapher.Node` instances, or arrays of `grapher.Node`.
      */
     addNode(nodeOpts) {
         if (!nodeOpts || !nodeOpts.id) {
@@ -164,15 +165,33 @@ export class GraphLibrary {
             if (nodeOpts.style?.backgroundColor) headerEntry.backgroundColor = nodeOpts.style.backgroundColor;
             if (nodeOpts.style?.borderColor) headerEntry.borderColor = nodeOpts.style.borderColor;
 
+            // Attach a click handler to the header to emit a general node click
+            headerEntry.on('click', () => {
+                this._emit('node:click', nodeOpts.id);
+            });
+
             if (nodeOpts.arguments && Object.keys(nodeOpts.arguments).length > 0) {
                 const argList = gNode.list();
+                
+                // Attach a click handler to the argument list background
+                argList.on('click', () => {
+                    this._emit('node:click', nodeOpts.id);
+                });
+                
                 for (const [argName, argValue] of Object.entries(nodeOpts.arguments)) {
                     const argument = new grapher.Argument(argName, argValue);
-                    // grapher.Argument constructor handles type detection for grapher.Node/grapher.Node[]
                     if (argument.type === undefined) { // Simple value
-                        argument.separator = ': '; // Default separator for simple key-value
+                        argument.separator = (nodeOpts.style && nodeOpts.style.argSeparator !== undefined) ? nodeOpts.style.argSeparator : ': ';
                     }
-                    // TODO: Allow passing more properties to grapher.Argument if argValue is an object
+
+                    // Set the activate handler for the specific argument
+                    argument.activate = () => {
+                        this._emit('node:argument:click', {
+                            nodeId: nodeOpts.id,
+                            name: argName,
+                            value: argValue
+                        });
+                    };
                     argList.add(argument);
                 }
             }
@@ -381,21 +400,12 @@ export class GraphLibrary {
     /**
      * @private
      * Attaches event listeners to SVG elements for interactivity.
+     * Note: Most handlers are now set during node creation. This method handles edges.
      * @param {grapher.Graph} gInstance - The grapher.Graph instance.
      */
     _attachEventListeners(gInstance) {
-        gInstance.nodes.forEach((nodeEntry) => {
-            const gNode = nodeEntry.label; // grapher.Node instance
-            const nodeName = gNode.name;    // The original ID
-
-            if (gNode.element && !gNode._isCluster) { // Attach to the main group of regular nodes
-                gNode.element.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent events from bubbling further if needed
-                    this._emit('node:click', nodeName);
-                });
-                // Add other listeners like mouseover, mouseout if needed
-            }
-        });
+        // Node listeners are now attached during the `addNode` process to allow
+        // for more granular control (e.g., clicking arguments vs. headers).
 
         gInstance.edges.forEach((edgeEntry) => {
             const gEdge = edgeEntry.label; // grapher.Edge instance
