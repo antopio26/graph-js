@@ -1,4 +1,3 @@
-
 const grapher = {};
 
 grapher.Graph = class {
@@ -925,6 +924,24 @@ grapher.Edge = class {
             path.classList.remove('select');
             this.element = path.cloneNode(true);
             path.parentNode.replaceChild(this.element, path);
+        }
+    }
+
+    focus() {
+        if (this.element) {
+            this.element.classList.add('hover');
+            this.element.setAttribute('marker-end', 'url("#arrowhead-hover")');
+        }
+    }
+
+    blur() {
+        if (this.element) {
+            this.element.classList.remove('hover');
+            if (this.element.classList.contains('select')) {
+                this.element.setAttribute('marker-end', 'url("#arrowhead-select")');
+            } else {
+                this.element.setAttribute('marker-end', 'url("#arrowhead")');
+            }
         }
     }
 };
