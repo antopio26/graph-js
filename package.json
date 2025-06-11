@@ -1,0 +1,33 @@
+{
+  "name": "react-graph-js",
+  "version": "1.0.0",
+  "description": "A React wrapper for GraphLibrary visualization.",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rollup -c",
+    "test": "echo \"No test specified\" && exit 0"
+  },
+  "keywords": [
+    "react",
+    "graph",
+    "visualization",
+    "dagre"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": "^17.0.0 || ^18.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.27.4",
+    "@babel/preset-react": "^7.27.1",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "rollup": "^2.79.2",
+    "rollup-plugin-css-only": "^4.5.2",
+    "rollup-plugin-terser": "^7.0.2"
+  }
+}
