@@ -64,7 +64,7 @@ Adds a node to the graph.
     - `borderColor`: `string` (optional, default: `'#000'`) - The border color of the node.
     - `width`: `number` (optional, default: `120`) - The width of the node.
     - `height`: `number` (optional, default: `60`) - The height of the node.
-  - `properties`: `object` (optional) - A map of key-value pairs to display as a list of properties within the node.
+  - `arguments`: `object` (optional) - A map of key-value pairs to display as a list of arguments within the node. The value can also be a `grapher.Node` or a list of `grapher.Nodes` for nested rendering.
   - `parent`: `string` (optional) - The ID of the parent cluster.
 
 #### `addEdge(edgeOptions)`

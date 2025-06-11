@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphLibrary - Comprehensive Showcase</title>
+    <link rel="stylesheet" href="../source/css/grapher.css"> <!-- Basic grapher styles -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+        }
+
+        #controls {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #graph-container {
+            width: 90%;
+            max-width: 1000px;
+            min-height: 500px;
+            border: 1px solid #d1d9e0;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            position: relative; /* For SVG fitting */
+        }
+
+        #event-log-container {
+            width: 90%;
+            max-width: 1000px;
+            margin-top: 25px;
+            background: #2f3640; /* Darker background for log */
+            color: #f5f6fa;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+            height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        #event-log-container strong {
+            color: #7ed6df; /* A light accent for the title */
+        }
+
+        #event-log-output div {
+            padding: 3px 0;
+            border-bottom: 1px solid #4a5058;
+        }
+        #event-log-output div:last-child {
+            border-bottom: none;
+        }
+
+        /* --- Custom Styles for Graph Elements --- */
+
+        /* Style for nodes with 'critical-node' class */
+        .critical-node .node-item { /* Targets the header entry's path */
+            fill: #ffeded; /* Light red background */
+            stroke: #e74c3c; /* Red border */
+        }
+        .critical-node .node-label text { /* Targets the text within the header entry */
+            fill: #c0392b; /* Darker red text */
+            font-weight: bold;
+        }
+
+        /* Style for clusters with 'department-cluster' class */
+        .department-cluster > rect { /* Targets the cluster's background rectangle */
+            stroke: #3498db;      /* Blue border */
+            stroke-width: 2px;
+            stroke-dasharray: 8, 4;
+            fill: rgba(52, 152, 219, 0.05); /* Light blue fill */
+        }
+        .department-cluster > .cluster-label { /* Targets the text label added to the cluster */
+            fill: #2980b9;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+
+        /* Style for edges with 'data-flow-edge' class */
+        .data-flow-edge { /* Targets the main edge path */
+            stroke: #2ecc71; /* Green stroke */
+            stroke-width: 2.5px;
+        }
+        .data-flow-edge path { /* Targets the arrowhead path */
+            fill: #27ae60; /* Darker green for arrowhead */
+        }
+        .edge-label { /* General style for edge labels */
+            font-size: 0.85em;
+            fill: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>GraphLibrary: Comprehensive Feature Showcase</h1>
+    <p>
+        This example demonstrates various features of the <code>GraphLibrary</code>,
+        including nodes, clusters, arguments, styling, and event handling.
+    </p>
+
+    <div id="controls">
+        <button id="rerender-button">Re-Render Graph</button>
+        <label for="layout-direction">Layout:</label>
+        <select id="layout-direction">
+            <option value="TB" selected>Top-to-Bottom</option>
+            <option value="BT">Bottom-to-Top</option>
+            <option value="LR">Left-to-Right</option>
+            <option value="RL">Right-to-Left</option>
+        </select>
+    </div>
+
+    <div id="graph-container"></div>
+
+    <div id="event-log-container">
+        <strong>Event Log:</strong>
+        <div id="event-log-output"></div>
+    </div>
+
+    <script type="module">
+        import { GraphLibrary } from "../source/graph.js";
+
+        const graphContainer = document.getElementById("graph-container");
+        const logOutput = document.getElementById("event-log-output");
+        const rerenderButton = document.getElementById("rerender-button");
+        const layoutDirectionSelect = document.getElementById("layout-direction");
+
+        function logEvent(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement("div");
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logOutput.prepend(logEntry);
+            console.log(`[Event] ${message}`, data);
+        }
+
+        async function initializeAndRenderGraph() {
+            logEvent("Initializing graph...");
+            graphContainer.innerHTML = ''; // Clear previous graph
+
+            const currentLayoutDirection = layoutDirectionSelect.value;
+
+            const graph = new GraphLibrary(graphContainer, {
+                direction: currentLayoutDirection, // e.g., 'TB', 'LR'
+                nodeSep: 70,    // Separation between nodes in the same rank
+                rankSep: 100,   // Separation between ranks (layers)
+                compound: true, // Enable clusters
+            });
+
+            // --- Define Clusters ---
+            graph.addCluster({
+                id: "tech_department",
+                label: "Technology Department",
+                styleClass: "department-cluster", // Custom CSS class for styling
+                style: {
+                    // backgroundColor: "rgba(142, 68, 173, 0.05)", // Example inline style
+                    rx: 15, // Rounded corners for the cluster rectangle
+                    ry: 15,
+                }
+            });
+
+            graph.addCluster({
+                id: "dev_team",
+                label: "Development Team",
+                parent: "tech_department", // Nested cluster
+                style: {
+                    backgroundColor: "rgba(26, 188, 156, 0.1)",
+                    rx: 8,
+                    ry: 8,
+                }
+            });
+
+            graph.addCluster({
+                id: "qa_team",
+                label: "QA Team",
+                parent: "tech_department",
+                style: {
+                    backgroundColor: "rgba(241, 196, 15, 0.1)",
+                    rx: 8,
+                    ry: 8,
+                }
+            });
+
+            // --- Define Nodes ---
+            graph.addNode({
+                id: "ceo",
+                label: "CEO",
+                style: { backgroundColor: "#d1e9ff", borderColor: "#73b9ff" } // Header entry styling
+            });
+
+            graph.addNode({
+                id: "cto",
+                label: "CTO",
+                parent: "tech_department",
+                styleClass: "critical-node", // Custom CSS class
+                arguments: {
+                    "Responsibilities": "Oversee Tech Strategy",
+                    "Reports To": "CEO"
+                }
+            });
+
+            graph.addNode({
+                id: "dev_lead",
+                label: "Development Lead",
+                parent: "dev_team",
+                arguments: {
+                    "Team Size": "5",
+                    "Current Sprint": "Sprint #23"
+                }
+            });
+
+            graph.addNode({
+                id: "frontend_dev",
+                label: "Frontend Developer",
+                parent: "dev_team",
+                arguments: { "Stack": "React, TypeScript" }
+            });
+
+            graph.addNode({
+                id: "backend_dev",
+                label: "Backend Developer",
+                parent: "dev_team",
+                arguments: { "Stack": "Node.js, Python" }
+            });
+
+            graph.addNode({
+                id: "qa_lead",
+                label: "QA Lead",
+                parent: "qa_team",
+                arguments: { "Focus": "Automation & Manual" }
+            });
+
+            graph.addNode({
+                id: "manual_tester",
+                label: "Manual Tester",
+                parent: "qa_team",
+            });
+            
+            graph.addNode({
+                id: "automation_engineer",
+                label: "Automation Engineer",
+                parent: "qa_team",
+                style: { backgroundColor: "#e8f5e9", borderColor: "#a5d6a7" }
+            });
+
+            graph.addNode({
+                id: "external_service_A",
+                label: "External API Partner A",
+                // No parent, top-level node
+            });
+
+
+            // --- Define Edges ---
+            graph.addEdge({ from: "ceo", to: "cto", label: "Manages" });
+            graph.addEdge({ from: "cto", to: "dev_lead", label: "Directs" });
+            graph.addEdge({ from: "cto", to: "qa_lead", label: "Directs" });
+
+            graph.addEdge({ from: "dev_lead", to: "frontend_dev", label: "Assigns Tasks" });
+            graph.addEdge({ from: "dev_lead", to: "backend_dev", label: "Assigns Tasks" });
+            
+            graph.addEdge({ from: "qa_lead", to: "manual_tester", label: "Coordinates" });
+            graph.addEdge({ from: "qa_lead", to: "automation_engineer", label: "Coordinates" });
+
+            // Edge crossing cluster boundaries (implicitly)
+            graph.addEdge({ from: "frontend_dev", to: "external_service_A", label: "Integrates With", styleClass: "data-flow-edge" });
+            graph.addEdge({ from: "backend_dev", to: "external_service_A", label: "Consumes Data", styleClass: "data-flow-edge" });
+
+            // Edge between nodes in different sub-clusters of the same parent
+            graph.addEdge({ from: "backend_dev", to: "automation_engineer", label: "Provides Test Builds" });
+
+
+            // --- Event Handling ---
+            graph.on("node:click", (nodeId) => {
+                logEvent(`Node clicked: ${nodeId}`, graph._nodes.get(nodeId) || graph._clusters.get(nodeId));
+            });
+
+            graph.on("edge:click", (edgeInfo) => {
+                logEvent(`Edge clicked: from '${edgeInfo.from}' to '${edgeInfo.to}' (Label: ${edgeInfo.label || 'N/A'})`, edgeInfo);
+            });
+
+            // --- Render the Graph ---
+            try {
+                logEvent(`Rendering graph with layout: ${currentLayoutDirection}`);
+                await graph.render();
+                logEvent("Graph rendered successfully.");
+            } catch (error) {
+                logEvent(`Error rendering graph: ${error.message}`, error);
+                console.error("Rendering error:", error);
+            }
+        }
+
+        // --- Event Listeners for Controls ---
+        rerenderButton.addEventListener("click", initializeAndRenderGraph);
+        layoutDirectionSelect.addEventListener("change", initializeAndRenderGraph);
+
+        // --- Initial Render ---
+        initializeAndRenderGraph();
+    </script>
+</body>
+</html>

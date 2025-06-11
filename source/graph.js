@@ -1,36 +1,33 @@
-/*
- * graph.js
- *
- * A comprehensive and intuitive wrapper for the dagre.js and grapher.js libraries,
- * designed to simplify the creation and rendering of complex graphs.
- * This is a rewritten version for improved clarity, robustness, and feature alignment
- * with the provided documentation and examples.
- *
- * Author: Gemini
- * Version: 2.3.0 (Patched and Enhanced)
+/**
+ * @file graph.js
+ * @description A library for creating and rendering graphs using grapher.js.
+ * This library provides a higher-level API to simplify graph construction
+ * and leverages grapher.js for SVG rendering and layout.
  */
 
-import { layout } from './dagre.js';
-import * as grapher from './grapher.js';
+import * as grapher from '../source/grapher.js';
+// Assuming dagre.js is implicitly used by grapher.Graph.layout as per grapher.js
+// If grapher.Graph.layout needs an explicit dagre worker, that would be an advanced setup.
 
 /**
- * A class to create and manage graph visualizations, acting as a facade
- * for dagre.js (layout) and grapher.js (rendering).
+ * Represents a graph visualization.
+ * This class acts as a facade for grapher.js, simplifying graph creation,
+ * layout, and rendering.
  */
 export class GraphLibrary {
     /**
-     * @param {HTMLElement} container - The HTML element to render the graph in.
+     * Creates an instance of the Graph.
+     * @param {HTMLElement} container - The HTML element where the graph will be rendered.
      * @param {object} [options={}] - Configuration options for the graph.
-     * @param {string} [options.direction='TB'] - The direction of the graph layout ('TB', 'BT', 'LR', 'RL').
-     * @param {number} [options.nodeSep=50] - The separation between nodes.
-     * @param {number} [options.rankSep=50] - The separation between ranks (layers).
-     * @param {boolean} [options.compound=true] - Enables support for compound graphs (clusters).
+     * @param {string} [options.direction='TB'] - Layout direction ('TB', 'BT', 'LR', 'RL').
+     * @param {number} [options.nodeSep=50] - Separation between nodes.
+     * @param {number} [options.rankSep=50] - Separation between ranks (layers).
+     * @param {boolean} [options.compound=true] - Whether the graph supports compound nodes (clusters).
      */
     constructor(container, options = {}) {
         if (!container || !(container instanceof HTMLElement)) {
-            throw new Error('A valid container HTML element must be provided.');
+            throw new Error('A valid HTML container element must be provided.');
         }
-
         this.container = container;
         this.options = {
             direction: 'TB',
@@ -40,359 +37,377 @@ export class GraphLibrary {
             ...options,
         };
 
-        this._nodes = new Map();
-        this._edges = [];
-        this._clusters = new Map();
+        this._nodes = new Map(); // Stores user-defined node options
+        this._edges = [];   // Stores user-defined edge options
+        this._clusters = new Map(); // Stores user-defined cluster options
         this._eventListeners = new Map();
 
-        if (getComputedStyle(this.container).position === 'static') {
-            this.container.style.position = 'relative';
+        /** @private @type {grapher.Graph | null} */
+        this.grapherInstance = null;
+
+        // Ensure container has a non-static position for SVG fitting.
+        if (typeof window !== 'undefined' && window.getComputedStyle) {
+            if (window.getComputedStyle(this.container).position === 'static') {
+                this.container.style.position = 'relative';
+            }
         }
     }
 
     /**
-     * Adds a node to the graph definition.
-     * @param {object} nodeOptions - The options for the node.
-     * @param {string} nodeOptions.id - A unique identifier for the node.
-     * @param {string} [nodeOptions.label=''] - The text to display inside the node.
-     * @param {object} [nodeOptions.style={}] - Custom styling for the node.
-     * @param {string} [nodeOptions.style.backgroundColor] - The background color of the node.
-     * @param {string} [nodeOptions.style.borderColor] - The border color of the node.
-     * @param {number} [nodeOptions.style.width=120] - The width of the node.
-     * @param {number} [nodeOptions.style.height=60] - The height of the node.
-     * @param {object} [nodeOptions.properties] - A map of key-value pairs to display as a list of properties within the node.
-     * @param {string} [nodeOptions.styleClass] - A CSS class to apply to the node group for custom styling.
-     * @param {string} [nodeOptions.parent] - The ID of the parent cluster.
+     * Adds a node to the graph.
+     * @param {object} nodeOpts - Options for the node.
+     * @param {string} nodeOpts.id - Unique identifier for the node. This will also be used as `grapher.Node.name`.
+     * @param {string} [nodeOpts.label=''] - Text label for the node.
+     * @param {string} [nodeOpts.parent] - ID of the parent cluster if this node is part of a compound graph.
+     * @param {string} [nodeOpts.styleClass] - CSS class to apply to the node's SVG group.
+     * @param {object} [nodeOpts.style] - Styling options.
+     * @param {string} [nodeOpts.style.backgroundColor] - Background color for the node's header.
+     * @param {string} [nodeOpts.style.borderColor] - Border color for the node's header.
+     * @param {number} [nodeOpts.style.width] - Initial width for layout. `grapher.Node.measure()` will override.
+     * @param {number} [nodeOpts.style.height] - Initial height for layout. `grapher.Node.measure()` will override.
+     * @param {object} [nodeOpts.arguments] - Key-value pairs for arguments. Values can be strings,
+     *                                        `grapher.Node` instances, or arrays of `grapher.Node`.
      */
-    addNode(nodeOptions) {
-        if (!nodeOptions.id) {
-            throw new Error('Node ID must be provided.');
+    addNode(nodeOpts) {
+        if (!nodeOpts || !nodeOpts.id) {
+            throw new Error('Node options with an `id` must be provided.');
         }
-        if (this._nodes.has(nodeOptions.id) || this._clusters.has(nodeOptions.id)) {
-            console.warn(`A node or cluster with ID '${nodeOptions.id}' already exists. Overwriting is not supported; please use unique IDs.`);
+        if (this._nodes.has(nodeOpts.id) || this._clusters.has(nodeOpts.id)) {
+            console.warn(`Node or cluster with ID '${nodeOpts.id}' already exists. Overwriting is not supported.`);
             return;
         }
-
-        const node = {
-            label: '',
-            style: {},
-            properties: {},
-            ...nodeOptions,
-        };
-
-        this._nodes.set(node.id, node);
+        this._nodes.set(nodeOpts.id, { label: nodeOpts.id, ...nodeOpts });
     }
 
     /**
-     * Adds an edge to connect two nodes.
-     * @param {object} edgeOptions - The options for the edge.
-     * @param {string} edgeOptions.from - The ID of the source node.
-     * @param {string} edgeOptions.to - The ID of the target node.
-     * @param {string} [edgeOptions.label=''] - The text to display on the edge.
-     * @param {object} [edgeOptions.style={}] - Custom styling for the edge.
-     * @param {string} [edgeOptions.styleClass] - A CSS class to apply to the edge path for custom styling.
+     * Adds an edge connecting two nodes.
+     * @param {object} edgeOpts - Options for the edge.
+     * @param {string} edgeOpts.from - ID of the source node.
+     * @param {string} edgeOpts.to - ID of the target node.
+     * @param {string} [edgeOpts.id] - Optional ID for the edge's SVG path element.
+     * @param {string} [edgeOpts.label=''] - Text label for the edge.
+     * @param {string} [edgeOpts.styleClass] - CSS class for the edge's SVG path.
+     * @param {number} [edgeOpts.minlen] - Minimum length for layout (Dagre).
+     * @param {number} [edgeOpts.weight] - Weight for layout (Dagre).
      */
-    addEdge(edgeOptions) {
-        if (!edgeOptions.from || !edgeOptions.to) {
-            throw new Error('Edge must have "from" and "to" properties.');
+    addEdge(edgeOpts) {
+        if (!edgeOpts || !edgeOpts.from || !edgeOpts.to) {
+            throw new Error('Edge options with `from` and `to` IDs must be provided.');
         }
-        if (!this._nodes.has(edgeOptions.from) && !this._clusters.has(edgeOptions.from)) {
-            console.warn(`Edge 'from' node '${edgeOptions.from}' does not exist.`);
-        }
-        if (!this._nodes.has(edgeOptions.to) && !this._clusters.has(edgeOptions.to)) {
-            console.warn(`Edge 'to' node '${edgeOptions.to}' does not exist.`);
-        }
-
-        this._edges.push({
-            label: '',
-            style: {},
-            ...edgeOptions,
-        });
+        this._edges.push({ ...edgeOpts });
     }
 
     /**
-     * Adds a cluster to group nodes.
-     * @param {object} clusterOptions - The options for the cluster.
-     * @param {string} clusterOptions.id - A unique identifier for the cluster.
-     * @param {string} [clusterOptions.label=''] - The text to display for the cluster.
-     * @param {string} [clusterOptions.parent] - The ID of a parent cluster for nesting.
-     * @param {object} [clusterOptions.style={}] - Custom styling for the cluster.
-     * @param {string} [clusterOptions.style.backgroundColor] - The background color of the cluster.
-     * @param {number} [clusterOptions.style.rx] - X-axis radius for rounded corners.
-     * @param {number} [clusterOptions.style.ry] - Y-axis radius for rounded corners.
-     * @param {string} [clusterOptions.styleClass] - A CSS class to apply to the cluster group.
+     * Adds a cluster (compound node) to the graph.
+     * @param {object} clusterOpts - Options for the cluster.
+     * @param {string} clusterOpts.id - Unique identifier for the cluster. This will also be `grapher.Node.name`.
+     * @param {string} [clusterOpts.label=''] - Text label displayed within the cluster.
+     * @param {string} [clusterOpts.parent] - ID of a parent cluster for nesting.
+     * @param {string} [clusterOpts.styleClass] - CSS class for the cluster's SVG group.
+     * @param {object} [clusterOpts.style] - Styling options.
+     * @param {string} [clusterOpts.style.backgroundColor] - Background color of the cluster.
+     * @param {number} [clusterOpts.style.rx] - X-axis radius for rounded corners.
+     * @param {number} [clusterOpts.style.ry] - Y-axis radius for rounded corners.
      */
-    addCluster(clusterOptions) {
-        if (!clusterOptions.id) {
-            throw new Error('Cluster ID must be provided.');
-        }
-        if (this._clusters.has(clusterOptions.id) || this._nodes.has(clusterOptions.id)) {
-            console.warn(`A cluster or node with ID '${clusterOptions.id}' already exists. Please use unique IDs.`);
+    addCluster(clusterOpts) {
+        if (!this.options.compound) {
+            console.warn('Cannot add cluster: graph is not configured as compound. Set `options.compound` to true.');
             return;
         }
-
-        const cluster = {
-            label: '',
-            style: {},
-            ...clusterOptions,
-        };
-
-        this._clusters.set(cluster.id, cluster);
+        if (!clusterOpts || !clusterOpts.id) {
+            throw new Error('Cluster options with an `id` must be provided.');
+        }
+        if (this._nodes.has(clusterOpts.id) || this._clusters.has(clusterOpts.id)) {
+            console.warn(`Node or cluster with ID '${clusterOpts.id}' already exists. Overwriting is not supported.`);
+            return;
+        }
+        this._clusters.set(clusterOpts.id, { label: clusterOpts.id, ...clusterOpts });
     }
 
     /**
-     * Renders the graph in the container. This is an asynchronous operation.
-     * @returns {Promise<void>} A promise that resolves when rendering is complete.
+     * Renders the graph in the specified container.
+     * This method orchestrates the creation of grapher.js objects, layout,
+     * SVG building, and final rendering.
+     * @returns {Promise<void>} A promise that resolves when rendering is complete or rejects on error.
      */
     async render() {
-        this.container.innerHTML = ''; 
+        this.container.innerHTML = ''; // Clear previous content
 
-        const { dagreNodes, dagreEdges } = this._prepareDagreData();
+        this.grapherInstance = new grapher.Graph(this.options.compound);
 
-        const state = {};
-        const layoutOptions = {
-            rankdir: this.options.direction,
+        // 1. Create and set grapher.Node instances for clusters
+        this._clusters.forEach(clusterOpts => {
+            const gClusterNode = new grapher.Node();
+            gClusterNode.name = clusterOpts.id; // Used by grapher.Graph for internal referencing
+            gClusterNode.id = clusterOpts.id;   // Used for the SVG element's ID attribute
+            gClusterNode.class = `cluster ${clusterOpts.styleClass || ''}`.trim();
+            if (clusterOpts.style?.rx) gClusterNode.rx = clusterOpts.style.rx;
+            if (clusterOpts.style?.ry) gClusterNode.ry = clusterOpts.style.ry;
+
+            // Store style and label info for application after build
+            gClusterNode._isCluster = true;
+            gClusterNode._clusterLabelText = clusterOpts.label;
+            gClusterNode._clusterBackgroundColor = clusterOpts.style?.backgroundColor;
+
+            this.grapherInstance.setNode(gClusterNode);
+        });
+
+        // 2. Create and set grapher.Node instances for regular nodes
+        this._nodes.forEach(nodeOpts => {
+            const gNode = new grapher.Node();
+            gNode.name = nodeOpts.id;
+            gNode.id = nodeOpts.id;
+            gNode.class = nodeOpts.styleClass || '';
+
+            const header = gNode.header();
+            const headerEntry = header.add(null, ['node-label'], nodeOpts.label || nodeOpts.id, nodeOpts.label || nodeOpts.id);
+            if (nodeOpts.style?.backgroundColor) headerEntry.backgroundColor = nodeOpts.style.backgroundColor;
+            if (nodeOpts.style?.borderColor) headerEntry.borderColor = nodeOpts.style.borderColor;
+
+            if (nodeOpts.arguments && Object.keys(nodeOpts.arguments).length > 0) {
+                const argList = gNode.list();
+                for (const [argName, argValue] of Object.entries(nodeOpts.arguments)) {
+                    const argument = new grapher.Argument(argName, argValue);
+                    // grapher.Argument constructor handles type detection for grapher.Node/grapher.Node[]
+                    if (argument.type === undefined) { // Simple value
+                        argument.separator = ': '; // Default separator for simple key-value
+                    }
+                    // TODO: Allow passing more properties to grapher.Argument if argValue is an object
+                    argList.add(argument);
+                }
+            }
+            // Pass initial dimensions if provided; grapher.Node.measure() will refine these
+            gNode.width = nodeOpts.style?.width || 0;
+            gNode.height = nodeOpts.style?.height || 0;
+
+            this.grapherInstance.setNode(gNode);
+        });
+
+        // 3. Set parent-child relationships for compound graph
+        if (this.options.compound) {
+            this._clusters.forEach(clusterOpts => {
+                if (clusterOpts.parent) {
+                    this.grapherInstance.setParent(clusterOpts.id, clusterOpts.parent);
+                }
+            });
+            this._nodes.forEach(nodeOpts => {
+                if (nodeOpts.parent) {
+                    this.grapherInstance.setParent(nodeOpts.id, nodeOpts.parent);
+                }
+            });
+        }
+
+        // 4. Create and set grapher.Edge instances
+        this._edges.forEach(edgeOpts => {
+            const sourceNodeEntry = this.grapherInstance.node(edgeOpts.from);
+            const targetNodeEntry = this.grapherInstance.node(edgeOpts.to);
+
+            if (!sourceNodeEntry || !targetNodeEntry) {
+                console.warn(`Skipping edge from '${edgeOpts.from}' to '${edgeOpts.to}': one or both nodes not found.`);
+                return;
+            }
+
+            const gEdge = new grapher.Edge(sourceNodeEntry.label, targetNodeEntry.label);
+            gEdge.v = edgeOpts.from; // Source node name for grapher.Graph
+            gEdge.w = edgeOpts.to;   // Target node name for grapher.Graph
+
+            if (edgeOpts.id) gEdge.id = edgeOpts.id; // For SVG element ID
+            gEdge.class = edgeOpts.styleClass || '';
+            gEdge.label = edgeOpts.label || '';
+
+            // Properties for Dagre layout (used by grapher.Graph.layout)
+            gEdge.minlen = edgeOpts.minlen || 1;
+            gEdge.weight = edgeOpts.weight || 1;
+            // grapher.Edge.width & height are for its label, calculated by grapher.Graph.build or layout
+            // grapher.Edge.labeloffset and labelpos are used by grapher.Graph.layout
+
+            this.grapherInstance.setEdge(gEdge);
+        });
+
+        // 5. Configure grapher.Graph options for its internal layout process
+        this.grapherInstance.options = {
+            direction: this.options.direction,
+            // dagre specific options that grapher.Graph.layout might use:
             nodesep: this.options.nodeSep,
             ranksep: this.options.rankSep,
+            // Add other dagre options here if grapher.Graph.layout supports them
         };
+        this.grapherInstance.identifier = "graphjs-render"; // For potential logging in grapher.js
 
+        // 6. Build SVG structure (creates the actual SVG elements)
+        const svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        this.container.appendChild(svgElement);
+        this.grapherInstance.build(document, svgElement);
+
+        // 7. Perform measurements (important for layout, now that elements are built)
+        this.grapherInstance.measure();
+
+        // 8. Perform layout
         try {
-            await layout(dagreNodes, dagreEdges, layoutOptions, state);
+            const layoutResult = await this.grapherInstance.layout(); // Assumes grapher.Graph.layout uses Dagre
+            if (layoutResult === 'graph-layout-cancelled') {
+                console.warn('Graph layout was cancelled.');
+                return;
+            }
         } catch (error) {
             console.error('Error during graph layout:', error);
             return;
         }
 
-        const g = this._buildGrapherGraph(dagreNodes, dagreEdges);
+        // 9. Apply custom styles after SVG elements are created
+        this._applyCustomStyles(this.grapherInstance);
 
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        this.container.appendChild(svg);
-        
-        g.build(document, svg);
-        
-        this._applyNodeStyles(g);
-        this._styleClusters(g);
-        
-        g.measure();
-        g.update();
+        // 10. Update SVG with layout coordinates and final appearances
+        this.grapherInstance.update();
 
-        this._fitSvgToContent(svg);
-        this._attachEventListeners(g);
+        // 11. Fit SVG to its content
+        this._fitSvgToContent(svgElement);
+
+        // 12. Attach event listeners
+        this._attachEventListeners(this.grapherInstance);
     }
 
     /**
      * Registers an event listener for graph events.
-     * @param {string} event - The name of the event (e.g., 'node:click', 'edge:click').
-     * @param {function} callback - The function to call when the event is triggered.
+     * @param {string} eventType - The event type (e.g., 'node:click', 'edge:click').
+     * @param {function} callback - The callback function.
      */
-    on(event, callback) {
-        if (!this._eventListeners.has(event)) {
-            this._eventListeners.set(event, []);
+    on(eventType, callback) {
+        if (typeof callback !== 'function') {
+            console.warn(`Callback for event '${eventType}' is not a function.`);
+            return;
         }
-        this._eventListeners.get(event).push(callback);
+        if (!this._eventListeners.has(eventType)) {
+            this._eventListeners.set(eventType, []);
+        }
+        this._eventListeners.get(eventType).push(callback);
     }
 
-    /** @private */
-    _prepareDagreData() {
-        const dagreNodes = [];
-        this._clusters.forEach(cluster => {
-            dagreNodes.push({ v: cluster.id, parent: cluster.parent });
-        });
-        this._nodes.forEach(node => {
-            dagreNodes.push({
-                v: node.id,
-                width: node.style?.width || 120,
-                height: node.style?.height || 60,
-                parent: node.parent
-            });
-        });
-
-        const dagreEdges = this._edges.map(edge => {
-            const label = edge.label || '';
-            // Estimate label dimensions for layout
-            const estimatedWidth = label.length * 7; 
-            const estimatedHeight = label ? 18 : 0;
-            return {
-                v: edge.from,
-                w: edge.to,
-                label: label,
-                minlen: 1,
-                weight: 1,
-                width: estimatedWidth,
-                height: estimatedHeight,
-                labeloffset: 10,
-                labelpos: 'r',
-            };
-        });
-
-        return { dagreNodes, dagreEdges };
-    }
-    
     /**
-     * @private 
-     * Constructs a grapher.js graph instance from the layouted dagre data.
+     * @private
+     * Emits an event to all registered listeners.
+     * @param {string} eventType - The event type.
+     * @param {any} data - Data to pass to the event listeners.
      */
-    _buildGrapherGraph(layoutedNodes, layoutedEdges) {
-        const g = new grapher.Graph(this.options.compound);
-        const nodeMap = new Map([...this._nodes, ...this._clusters]);
-
-        layoutedNodes.forEach(nodeData => {
-            const info = nodeMap.get(nodeData.v);
-            const isCluster = this._clusters.has(nodeData.v);
-            
-            const grapherNode = isCluster 
-                ? this._createGrapherCluster(info)
-                : this._createGrapherNode(info);
-
-            Object.assign(grapherNode, nodeData);
-            
-            grapherNode.name = nodeData.v;
-            g.setNode(grapherNode);
-            
-            if (info.parent) {
-                g.setParent(nodeData.v, info.parent);
-            }
-        });
-
-        layoutedEdges.forEach(edgeData => {
-            const fromNode = g.node(edgeData.v);
-            const toNode = g.node(edgeData.w);
-            if (!fromNode || !toNode) return;
-
-            const edgeInfo = this._edges.find(e => e.from === edgeData.v && e.to === edgeData.w && e.label === edgeData.label);
-            const grapherEdge = new grapher.Edge(fromNode.label, toNode.label);
-            
-            Object.assign(grapherEdge, edgeData);
-            grapherEdge.class = edgeInfo?.styleClass || '';
-
-            g.setEdge(grapherEdge);
-        });
-
-        return g;
-    }
-
-    /** @private */
-    _createGrapherNode(nodeInfo) {
-        const grapherNode = new grapher.Node();
-        grapherNode.class = nodeInfo.styleClass || '';
-
-        const header = grapherNode.header();
-        const title = header.add(null, ['node-item-type'], nodeInfo.label, nodeInfo.label);
-
-        if (nodeInfo.style?.backgroundColor) {
-            title.backgroundColor = nodeInfo.style.backgroundColor;
-        }
-        if (nodeInfo.style?.borderColor) {
-            title.borderColor = nodeInfo.style.borderColor;
-        }
-        
-        if (nodeInfo.properties && Object.keys(nodeInfo.properties).length > 0) {
-            const list = grapherNode.list();
-            for (const [key, value] of Object.entries(nodeInfo.properties)) {
-                const argument = list.argument(key, String(value));
-                argument.separator = ': ';
-                list.add(argument);
-            }
-        }
-        
-        return grapherNode;
-    }
-    
-    /** @private */
-    _applyNodeStyles(graphInstance) {
-        graphInstance.nodes.forEach((node, nodeId) => {
-            if (this._clusters.has(nodeId)) return;
-
-            const grapherNode = node.label;
-            for (const block of grapherNode._blocks) {
-                if (block instanceof grapher.Node.Header) {
-                    for (const entry of block._entries) {
-                        if (entry.path) {
-                            if (entry.backgroundColor) {
-                                entry.path.style.fill = entry.backgroundColor;
-                            }
-                            if (entry.borderColor) {
-                                entry.path.style.stroke = entry.borderColor;
-                            }
-                        }
-                    }
+    _emit(eventType, data) {
+        if (this._eventListeners.has(eventType)) {
+            this._eventListeners.get(eventType).forEach(callback => {
+                try {
+                    callback(data);
+                } catch (error) {
+                    console.error(`Error in event listener for ${eventType}:`, error);
                 }
-            }
-        });
+            });
+        }
     }
 
-    /** @private */
-    _createGrapherCluster(clusterInfo) {
-        const clusterNode = new grapher.Node();
-        clusterNode.class = clusterInfo.styleClass || '';
-        
-        if (clusterInfo.style?.rx) clusterNode.rx = clusterInfo.style.rx;
-        if (clusterInfo.style?.ry) clusterNode.ry = clusterInfo.style.ry;
-
-        return clusterNode;
-    }
-    
-    /** @private */
-    _styleClusters(graphInstance) {
-        this._clusters.forEach(clusterInfo => {
-            const clusterNode = graphInstance.node(clusterInfo.id)?.label;
-            if (clusterNode?.element) {
-                if (clusterInfo.style?.backgroundColor && clusterNode.rectangle) {
-                    clusterNode.rectangle.style.fill = clusterInfo.style.backgroundColor;
+    /**
+     * @private
+     * Applies custom styles to the generated SVG elements.
+     * This is called after `grapherInstance.build()`.
+     * @param {grapher.Graph} gInstance - The grapher.Graph instance.
+     */
+    _applyCustomStyles(gInstance) {
+        gInstance.nodes.forEach((nodeEntry) => {
+            const gNode = nodeEntry.label; // This is the grapher.Node instance
+            if (gNode._isCluster && gNode.rectangle) {
+                // Style cluster rectangle
+                if (gNode._clusterBackgroundColor) {
+                    gNode.rectangle.style.fill = gNode._clusterBackgroundColor;
                 }
-                if (clusterInfo.label) {
+                // Add cluster label
+                if (gNode._clusterLabelText && gNode.element) {
                     const labelElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    labelElement.textContent = clusterInfo.label;
-                    labelElement.setAttribute('x', -clusterNode.width / 2 + 10);
-                    labelElement.setAttribute('y', -clusterNode.height / 2 + 20);
-                    labelElement.setAttribute('font-family', 'sans-serif');
-                    labelElement.setAttribute('font-size', '14px');
-                    clusterNode.element.appendChild(labelElement);
+                    labelElement.textContent = gNode._clusterLabelText;
+                    // Position label within the cluster (adjust as needed)
+                    labelElement.setAttribute('x', String(-gNode.width / 2 + 10)); // Relative to cluster center
+                    labelElement.setAttribute('y', String(-gNode.height / 2 + 20));
+                    labelElement.setAttribute('class', 'cluster-label'); // For CSS styling
+                    gNode.element.appendChild(labelElement);
                 }
-            }
-        });
-    }
-
-    /** @private */
-    _fitSvgToContent(svg) {
-        if (!svg.getBBox) return;
-        const bbox = svg.getBBox();
-        if (bbox.width === 0 || bbox.height === 0) return;
-        
-        const margin = 20;
-        const width = bbox.width + margin * 2;
-        const height = bbox.height + margin * 2;
-        
-        svg.setAttribute('width', width);
-        svg.setAttribute('height', height);
-        svg.setAttribute('viewBox', `${bbox.x - margin} ${bbox.y - margin} ${width} ${height}`);
-    }
-
-    /** @private */
-    _attachEventListeners(graphInstance) {
-        graphInstance.nodes.forEach((node, nodeId) => {
-            const element = node.label.element;
-            if (element && !this._clusters.has(nodeId)) {
-                element.addEventListener('click', () => {
-                    this._emit('node:click', nodeId);
+            } else if (gNode._blocks) {
+                // Style regular node parts (e.g., header entries)
+                gNode._blocks.forEach(block => {
+                    if (block instanceof grapher.Node.Header) {
+                        block._entries.forEach(entry => {
+                            if (entry.path) { // path is created in grapher.Node.Header.Entry.build
+                                if (entry.backgroundColor) {
+                                    entry.path.style.fill = entry.backgroundColor;
+                                }
+                                if (entry.borderColor) {
+                                    entry.path.style.stroke = entry.borderColor;
+                                }
+                            }
+                        });
+                    }
+                    // Potentially style ArgumentList or other block types here
                 });
             }
         });
-        
-        graphInstance.edges.forEach(edge => {
-            const hitArea = edge.label.hitTest; 
-            if (hitArea) {
-                hitArea.addEventListener('click', () => {
-                    this._emit('edge:click', { from: edge.v, to: edge.w });
-                });
-            }
-        });
+
+        // Edge styling can also be done here if `gEdge.class` is not sufficient
+        // For example, by finding `gEdge.element` and applying styles.
     }
 
-    /** @private */
-    _emit(event, data) {
-        if (this._eventListeners.has(event)) {
-            this._eventListeners.get(event).forEach(callback => callback(data));
+
+    /**
+     * @private
+     * Adjusts the SVG element's dimensions and viewBox to fit its content.
+     * @param {SVGElement} svgElement - The SVG root element.
+     */
+    _fitSvgToContent(svgElement) {
+        if (typeof svgElement.getBBox !== 'function') return;
+
+        const bbox = svgElement.getBBox();
+        if (bbox.width === 0 && bbox.height === 0 && bbox.x === 0 && bbox.y === 0) {
+            // BBox might be zero if there's no content or content is not visible yet.
+            // Set a default small size or skip.
+            svgElement.setAttribute('width', '100');
+            svgElement.setAttribute('height', '50');
+            return;
         }
+
+        const margin = 20;
+        const viewBoxX = bbox.x - margin;
+        const viewBoxY = bbox.y - margin;
+        const viewBoxWidth = bbox.width + margin * 2;
+        const viewBoxHeight = bbox.height + margin * 2;
+
+        svgElement.setAttribute('viewBox', `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`);
+        svgElement.setAttribute('width', String(viewBoxWidth));
+        svgElement.setAttribute('height', String(viewBoxHeight));
+    }
+
+    /**
+     * @private
+     * Attaches event listeners to SVG elements for interactivity.
+     * @param {grapher.Graph} gInstance - The grapher.Graph instance.
+     */
+    _attachEventListeners(gInstance) {
+        gInstance.nodes.forEach((nodeEntry) => {
+            const gNode = nodeEntry.label; // grapher.Node instance
+            const nodeName = gNode.name;    // The original ID
+
+            if (gNode.element && !gNode._isCluster) { // Attach to the main group of regular nodes
+                gNode.element.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent events from bubbling further if needed
+                    this._emit('node:click', nodeName);
+                });
+                // Add other listeners like mouseover, mouseout if needed
+            }
+        });
+
+        gInstance.edges.forEach((edgeEntry) => {
+            const gEdge = edgeEntry.label; // grapher.Edge instance
+            // grapher.js already adds some listeners to gEdge.hitTest for focus
+            // We can add our click listener to the same element or gEdge.element
+            const clickableElement = gEdge.hitTest || gEdge.element;
+            if (clickableElement) {
+                clickableElement.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this._emit('edge:click', { from: gEdge.v, to: gEdge.w, id: gEdge.id, label: gEdge.label });
+                });
+            }
+        });
     }
 }
