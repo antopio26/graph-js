@@ -84,8 +84,6 @@
 
 .node-item:hover > path {
   fill: var(--color-hover-bg) !important;
-  stroke: var(--color-hover-border);
-  stroke-width: var(--border-width-hover);
 }
 
 .node-item:hover > text {
