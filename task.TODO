@@ -1,2 +1,11 @@
 1) custom style documentation
 https://github.com/antopio26/graph-js.git
+
+to publish
+
+npm login
+npm publish
+
+to install
+
+npm install react-graph-js
