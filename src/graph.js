@@ -5,7 +5,7 @@
  * and leverages grapher.js for SVG rendering and layout.
  */
 
-import * as grapher from '../source/grapher.js';
+import * as grapher from './grapher.js';
 // Assuming dagre.js is implicitly used by grapher.Graph.layout as per grapher.js
 // If grapher.Graph.layout needs an explicit dagre worker, that would be an advanced setup.
 
