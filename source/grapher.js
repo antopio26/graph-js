@@ -173,10 +173,10 @@ grapher.Graph = class {
                 // cluster
                 node.rectangle = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                 if (node.rx) {
-                    node.rectangle.setAttribute('rx', entry.rx);
+                    node.rectangle.setAttribute('rx', node.rx);
                 }
                 if (node.ry) {
-                    node.rectangle.setAttribute('ry', entry.ry);
+                    node.rectangle.setAttribute('ry', node.ry);
                 }
                 node.element = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                 node.element.setAttribute('class', 'cluster');

@@ -7,7 +7,7 @@
  * with the provided documentation and examples.
  *
  * Author: Gemini
- * Version: 2.2.0 (Patched)
+ * Version: 2.3.0 (Patched and Enhanced)
  */
 
 import { layout } from './dagre.js';
@@ -60,6 +60,7 @@ export class GraphLibrary {
      * @param {string} [nodeOptions.style.borderColor] - The border color of the node.
      * @param {number} [nodeOptions.style.width=120] - The width of the node.
      * @param {number} [nodeOptions.style.height=60] - The height of the node.
+     * @param {object} [nodeOptions.properties] - A map of key-value pairs to display as a list of properties within the node.
      * @param {string} [nodeOptions.styleClass] - A CSS class to apply to the node group for custom styling.
      * @param {string} [nodeOptions.parent] - The ID of the parent cluster.
      */
@@ -75,6 +76,7 @@ export class GraphLibrary {
         const node = {
             label: '',
             style: {},
+            properties: {},
             ...nodeOptions,
         };
 
@@ -205,23 +207,28 @@ export class GraphLibrary {
             });
         });
 
-        const dagreEdges = this._edges.map(edge => ({
-            v: edge.from,
-            w: edge.to,
-            label: edge.label || '',
-            minlen: 1,
-            weight: 1,
-            width: 0,
-            height: 0,
-            labeloffset: 10,
-            labelpos: 'r',
-        }));
+        const dagreEdges = this._edges.map(edge => {
+            const label = edge.label || '';
+            // Estimate label dimensions for layout
+            const estimatedWidth = label.length * 7; 
+            const estimatedHeight = label ? 18 : 0;
+            return {
+                v: edge.from,
+                w: edge.to,
+                label: label,
+                minlen: 1,
+                weight: 1,
+                width: estimatedWidth,
+                height: estimatedHeight,
+                labeloffset: 10,
+                labelpos: 'r',
+            };
+        });
 
         return { dagreNodes, dagreEdges };
     }
     
     /**
-     * *** FIX: This method has been updated ***
      * @private 
      * Constructs a grapher.js graph instance from the layouted dagre data.
      */
@@ -239,9 +246,8 @@ export class GraphLibrary {
 
             Object.assign(grapherNode, nodeData);
             
-            // Add the 'name' property, which grapher.js uses as the node key.
             grapherNode.name = nodeData.v;
-            g.setNode(grapherNode); // Pass the grapher.Node instance directly.
+            g.setNode(grapherNode);
             
             if (info.parent) {
                 g.setParent(nodeData.v, info.parent);
@@ -259,7 +265,6 @@ export class GraphLibrary {
             Object.assign(grapherEdge, edgeData);
             grapherEdge.class = edgeInfo?.styleClass || '';
 
-            // Pass the grapher.Edge instance directly. It now contains the required .v and .w properties.
             g.setEdge(grapherEdge);
         });
 
@@ -279,6 +284,15 @@ export class GraphLibrary {
         }
         if (nodeInfo.style?.borderColor) {
             title.borderColor = nodeInfo.style.borderColor;
+        }
+        
+        if (nodeInfo.properties && Object.keys(nodeInfo.properties).length > 0) {
+            const list = grapherNode.list();
+            for (const [key, value] of Object.entries(nodeInfo.properties)) {
+                const argument = list.argument(key, String(value));
+                argument.separator = ': ';
+                list.add(argument);
+            }
         }
         
         return grapherNode;
