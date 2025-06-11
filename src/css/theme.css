@@ -29,9 +29,12 @@
   --color-hover-border: #cc2936;   /* Persian Red for hover border */
   --color-edge-hover: #cc2936;     /* Persian Red for edge hover */
 
+  --color-select-border: #cc2936; /* Persian Red for selected elements */
+
   /* Transitions & Sizing */
   --transition-speed: 0.2s;
-  --border-width-hover: 1.5px;
+  --border-width-hover: 1.25px;
+  --border-width-select: 1.5px;
 }
 
 /* --- General Structure --- */
@@ -45,6 +48,10 @@
 .node .node-item text,
 .node-argument > rect {
   transition: all var(--transition-speed) ease-in-out;
+}
+
+.edge-path {
+  transition: stroke 1ms ease-in-out, stroke-width var(--transition-speed) ease-in-out;
 }
 
 /* --- Node Type Styling (using general classes) --- */
@@ -95,13 +102,34 @@
   stroke-width: var(--border-width-hover);
 }
 
-/* --- Edge Styling --- */
-
 .edge-path.hover {
   stroke: var(--color-edge-hover);
-  stroke-width: 1.5px;
+  stroke-width: var(--border-width-hover);
+  marker-end: url("#arrowhead-hover"); /* Red arrowhead */
 }
 
 #arrowhead-hover {
   fill: var(--color-edge-hover) !important;
+}
+
+/* --- Selected Elements Styling --- */
+
+.node-item.select > path {
+  stroke: var(--color-select-border); /* Red border */
+  stroke-width: var(--border-width-select); /* Bigger border */
+}
+
+.node-argument.select > rect {
+  stroke: var(--color-select-border); /* Red border */
+  stroke-width: var(--border-width-select); /* Bigger border */
+}
+
+.edge-path.select {
+  stroke: var(--color-select-border); /* Red arrow */
+  stroke-width: var(--border-width-select); /* Bigger stroke */
+  marker-end: url("#arrowhead-select"); /* Red arrowhead */
+}
+
+#arrowhead-select {
+  fill: var(--color-select-border) !important; /* Red arrowhead */
 }
