@@ -1,235 +1,309 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GraphLibrary - Themed Graph</title>
-    <link rel="stylesheet" href="../source/css/grapher.css"> <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f4f8;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-        }
+    <link rel="stylesheet" href="../source/css/grapher.css" />
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f0f4f8;
+        color: #333;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        padding: 20px;
+        line-height: 1.6;
+      }
 
-        h1 {
-            color: #2c3e50;
-        }
+      h1 {
+        color: #2c3e50;
+      }
 
-        #controls {
-            margin-bottom: 20px;
-            padding: 10px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
+      #controls {
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
 
-        #graph-container {
-            width: 90%;
-            max-width: 1000px;
-            min-height: 700px;
-            border: 1px solid #d1d9e0;
-            border-radius: 8px;
-            background-color: #ffffff;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            margin-top: 20px;
-            position: relative; /* For SVG fitting */
-        }
-        
-        #event-log-container {
-            width: 90%;
-            max-width: 1000px;
-            margin-top: 25px;
-            background: #2f3640; /* Darker background for log */
-            color: #f5f6fa;
-            border-radius: 5px;
-            padding: 15px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9em;
-            height: 150px;
-            overflow-y: auto;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
+      #graph-container {
+        width: 90%;
+        max-width: 1000px;
+        min-height: 700px;
+        border: 1px solid #d1d9e0;
+        border-radius: 8px;
+        background-color: #ffffff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        position: relative; /* For SVG fitting */
+      }
 
-        #event-log-container strong {
-            color: #7ed6df; /* A light accent for the title */
-        }
+      #event-log-container {
+        width: 90%;
+        max-width: 1000px;
+        margin-top: 25px;
+        background: #2f3640; /* Darker background for log */
+        color: #f5f6fa;
+        border-radius: 5px;
+        padding: 15px;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 0.9em;
+        height: 150px;
+        overflow-y: auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
 
-        #event-log-output div {
-            padding: 3px 0;
-            border-bottom: 1px solid #4a5058;
-        }
-        #event-log-output div:last-child {
-            border-bottom: none;
-        }
+      #event-log-container strong {
+        color: #7ed6df; /* A light accent for the title */
+      }
 
-        /* --- Custom Theme Styles --- */
-        .node path, .node line { stroke: #000; }
-        .node .node-item path, .node .node-item text { transition: fill 0.2s ease-in-out; }
-        .node:hover .node-item path { fill: #ffffff !important; }
-        .node:hover .node-item text { fill: #000000 !important; }
-        .op-node .node-item path { fill: #4B5563; }
-        .op-node .node-item text { fill: #ffffff; }
-        .gemm-node .node-item path { fill: #3B82F6; }
-        .gemm-node .node-item text { fill: #ffffff; }
-        .act-node .node-item path { fill: #EF4444; }
-        .act-node .node-item text { fill: #ffffff; }
-        .data-node .node-item path { fill: #10B981; }
-        .data-node .node-item text { fill: #ffffff; }
-        .flatten-node .node-item path { fill: #8d5b29; }
-        .flatten-node .node-item text { fill: #ffffff; }
-        .node-argument-list > path { fill: #ffffff !important; }
-        .node-argument > text, .node-argument > text > tspan { fill: #000000 !important; }
+      #event-log-output div {
+        padding: 3px 0;
+        border-bottom: 1px solid #4a5058;
+      }
+      #event-log-output div:last-child {
+        border-bottom: none;
+      }
 
-        /* --- New style for hovered edges --- */
-        .edge-path.hover {
-            stroke: #d81b60; /* A vivid red/pink for hover */
-            stroke-width: 1.5px;
-        }
+      /* --- Custom Theme Styles --- */
+      .node path,
+      .node line {
+        stroke: #000;
+      }
+      .node .node-item path,
+      .node .node-item text {
+        transition: fill 0.2s ease-in-out;
+      }
+      .node:hover .node-item path {
+        fill: #ffffff !important;
+      }
+      .node:hover .node-item text {
+        fill: #000000 !important;
+      }
+      .op-node .node-item path {
+        fill: #4b5563;
+      }
+      .op-node .node-item text {
+        fill: #ffffff;
+      }
+      .gemm-node .node-item path {
+        fill: #3b82f6;
+      }
+      .gemm-node .node-item text {
+        fill: #ffffff;
+      }
+      .act-node .node-item path {
+        fill: #ef4444;
+      }
+      .act-node .node-item text {
+        fill: #ffffff;
+      }
+      .data-node .node-item path {
+        fill: #10b981;
+      }
+      .data-node .node-item text {
+        fill: #ffffff;
+      }
+      .flatten-node .node-item path {
+        fill: #8d5b29;
+      }
+      .flatten-node .node-item text {
+        fill: #ffffff;
+      }
+      .node-argument-list > path {
+        fill: #ffffff !important;
+      }
+      .node-argument > text,
+      .node-argument > text > tspan {
+        fill: #000000 !important;
+      }
 
+      /* --- New style for hovered edges --- */
+      .edge-path.hover {
+        stroke: #d81b60; /* A vivid red/pink for hover */
+        stroke-width: 1.5px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Neural Network Graph Showcase (Themed)</h1>
     <p>
-        This example demonstrates applying a custom black and white theme with colored labels.
+      This example demonstrates applying a custom black and white theme with
+      colored labels.
     </p>
 
     <div id="controls">
-        <label for="layout-direction">Layout:</label>
-        <select id="layout-direction">
-            <option value="TB" selected>Vertical</option>
-            <option value="LR">Horizontal</option>
-        </select>
+      <label for="layout-direction">Layout:</label>
+      <select id="layout-direction">
+        <option value="TB" selected>Vertical</option>
+        <option value="LR">Horizontal</option>
+      </select>
     </div>
 
     <div id="graph-container"></div>
 
     <div id="event-log-container">
-        <strong>Event Log:</strong>
-        <div id="event-log-output"></div>
+      <strong>Event Log:</strong>
+      <div id="event-log-output"></div>
     </div>
 
     <script type="module">
-        import { GraphLibrary } from "../source/graph.js";
+      import { GraphLibrary } from "../source/graph.js";
 
-        const graphContainer = document.getElementById("graph-container");
-        const layoutDirectionSelect = document.getElementById("layout-direction");
-        const logOutput = document.getElementById("event-log-output");
+      const graphContainer = document.getElementById("graph-container");
+      const layoutDirectionSelect = document.getElementById("layout-direction");
+      const logOutput = document.getElementById("event-log-output");
 
-        function logEvent(message, data = null) {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = document.createElement("div");
-            logEntry.textContent = `[${timestamp}] ${message}`;
-            logOutput.prepend(logEntry);
-            if (data) {
-                console.log(`[Event] ${message}`, data);
-            }
+      function logEvent(message, data = null) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement("div");
+        logEntry.textContent = `[${timestamp}] ${message}`;
+        logOutput.prepend(logEntry);
+        if (data) {
+          console.log(`[Event] ${message}`, data);
         }
+      }
 
-        async function initializeAndRenderGraph() {
-            logEvent("Initializing graph...");
-            graphContainer.innerHTML = ''; // Clear previous graph
+      async function initializeAndRenderGraph() {
+        logEvent("Initializing graph...");
+        graphContainer.innerHTML = ""; // Clear previous graph
 
-            const currentLayoutDirection = layoutDirectionSelect.value;
+        const currentLayoutDirection = layoutDirectionSelect.value;
 
-            const graph = new GraphLibrary(graphContainer, {
-                direction: currentLayoutDirection,
-                nodeSep: 50,
-                rankSep: 60,
-                compound: false,
-            });
+        const graph = new GraphLibrary(graphContainer, {
+          direction: currentLayoutDirection,
+          nodeSep: 50,
+          rankSep: 60,
+          compound: false,
+        });
 
-            // --- Define Nodes (using styleClass for theming) ---
-            graph.addNode({ id: 'input', label: 'input', styleClass: 'op-node' });
-            graph.addNode({ id: 'cast', label: 'Cast', styleClass: 'op-node' });
-            graph.addNode({ id: 'flatten', label: 'Flatten', styleClass: 'flatten-node' });
-            graph.addNode({
-                id: 'gemm1', label: 'Gemm', styleClass: 'gemm-node',
-                style: { argSeparator: ' ' },
-                arguments: { 'B': '(256x63)', 'C': '(256)' }
-            });
-            graph.addNode({ id: 'relu1', label: 'Relu', styleClass: 'act-node' });
-            graph.addNode({
-                id: 'gemm2', label: 'Gemm', styleClass: 'gemm-node',
-                style: { argSeparator: ' ' },
-                arguments: { 'B': '(256x256)', 'C': '(256)' }
-            });
-            graph.addNode({ id: 'relu2', label: 'Relu', styleClass: 'act-node' });
-            graph.addNode({
-                id: 'gemm3', label: 'Gemm', styleClass: 'gemm-node',
-                style: { argSeparator: ' ' },
-                arguments: { 'B': '(12x256)', 'C': '(12)' }
-            });
-            graph.addNode({
-                id: 'clip', label: 'Clip', styleClass: 'act-node',
-                style: { argSeparator: ' = ' },
-                arguments: { 'min': '-20', 'max': '2' }
-            });
-            graph.addNode({ id: 'exp', label: 'Exp', styleClass: 'op-node' });
-            graph.addNode({
-                id: 'gemm4', label: 'Gemm', styleClass: 'gemm-node',
-                style: { argSeparator: ' ' },
-                arguments: { 'B': '(12x256)', 'C': '(12)' }
-            });
-            graph.addNode({ id: 'shape1', label: 'Shape', styleClass: 'data-node' });
-            graph.addNode({ id: 'const1', label: 'ConstantOfShape', styleClass: 'data-node' });
-            graph.addNode({ id: 'shape2', label: 'Shape', styleClass: 'data-node' });
-            graph.addNode({ id: 'const2', label: 'ConstantOfShape', styleClass: 'data-node' });
+        // --- Define Nodes (using styleClass for theming) ---
+        graph.addNode({ id: "input", label: "input", styleClass: "op-node" });
+        graph.addNode({ id: "cast", label: "Cast", styleClass: "op-node" });
+        graph.addNode({
+          id: "flatten",
+          label: "Flatten",
+          styleClass: "flatten-node",
+        });
+        graph.addNode({
+          id: "gemm1",
+          label: "Gemm",
+          styleClass: "gemm-node",
+          style: { argSeparator: " " },
+          arguments: { B: "(256x63)", C: "(256)" },
+        });
+        graph.addNode({ id: "relu1", label: "Relu", styleClass: "act-node" });
+        graph.addNode({
+          id: "gemm2",
+          label: "Gemm",
+          styleClass: "gemm-node",
+          style: { argSeparator: " " },
+          arguments: { B: "(256x256)", C: "(256)" },
+        });
+        graph.addNode({ id: "relu2", label: "Relu", styleClass: "act-node" });
+        graph.addNode({
+          id: "gemm3",
+          label: "Gemm",
+          styleClass: "gemm-node",
+          style: { argSeparator: " " },
+          arguments: { B: "(12x256)", C: "(12)" },
+        });
+        graph.addNode({
+          id: "clip",
+          label: "Clip",
+          styleClass: "act-node",
+          style: { argSeparator: " = " },
+          arguments: { min: "-20", max: "2" },
+        });
+        graph.addNode({ id: "exp", label: "Exp", styleClass: "op-node" });
+        graph.addNode({
+          id: "gemm4",
+          label: "Gemm",
+          styleClass: "gemm-node",
+          style: { argSeparator: " " },
+          arguments: { B: "(12x256)", C: "(12)" },
+        });
+        graph.addNode({
+          id: "shape1",
+          label: "Shape",
+          styleClass: "data-node",
+        });
+        graph.addNode({
+          id: "const1",
+          label: "ConstantOfShape",
+          styleClass: "data-node",
+        });
+        graph.addNode({
+          id: "shape2",
+          label: "Shape",
+          styleClass: "data-node",
+        });
+        graph.addNode({
+          id: "const2",
+          label: "ConstantOfShape",
+          styleClass: "data-node",
+        });
 
-            // --- Define Edges ---
-            graph.addEdge({ from: 'input', to: 'cast', label: 'batch_sizex63' });
-            graph.addEdge({ from: 'cast', to: 'flatten' });
-            graph.addEdge({ from: 'flatten', to: 'gemm1' });
-            graph.addEdge({ from: 'gemm1', to: 'relu1' });
-            graph.addEdge({ from: 'relu1', to: 'gemm2' });
-            graph.addEdge({ from: 'gemm2', to: 'relu2' });
-            graph.addEdge({ from: 'relu2', to: 'gemm3' });
-            graph.addEdge({ from: 'relu2', to: 'gemm4' });
-            graph.addEdge({ from: 'gemm3', to: 'clip' });
-            graph.addEdge({ from: 'clip', to: 'exp' });
-            graph.addEdge({ from: 'exp', to: 'gemm4' });
-            graph.addEdge({ from: 'gemm3', to: 'shape1' });
-            graph.addEdge({ from: 'gemm4', to: 'shape2' });
-            graph.addEdge({ from: 'shape1', to: 'const1' });
-            graph.addEdge({ from: 'shape2', to: 'const2' });
-            graph.addEdge({ from: 'const1', to: 'gemm4' });
-            graph.addEdge({ from: 'const2', to: 'gemm3' });
+        // --- Define Edges ---
+        graph.addEdge({ from: "input", to: "cast", label: "batch_sizex63" });
+        graph.addEdge({ from: "cast", to: "flatten" });
+        graph.addEdge({ from: "flatten", to: "gemm1" });
+        graph.addEdge({ from: "gemm1", to: "relu1" });
+        graph.addEdge({ from: "relu1", to: "gemm2" });
+        graph.addEdge({ from: "gemm2", to: "relu2" });
+        graph.addEdge({ from: "relu2", to: "gemm3" });
+        graph.addEdge({ from: "relu2", to: "gemm4" });
+        graph.addEdge({ from: "gemm3", to: "clip" });
+        graph.addEdge({ from: "clip", to: "exp" });
+        graph.addEdge({ from: "exp", to: "gemm4" });
+        graph.addEdge({ from: "gemm3", to: "shape1" });
+        graph.addEdge({ from: "gemm4", to: "shape2" });
+        graph.addEdge({ from: "shape1", to: "const1" });
+        graph.addEdge({ from: "shape2", to: "const2" });
+        graph.addEdge({ from: "const1", to: "gemm4" });
+        graph.addEdge({ from: "const2", to: "gemm3" });
 
-            // --- Event Handling ---
-            graph.on("node:click", (nodeId) => {
-                logEvent(`Node clicked: ${nodeId}`);
-            });
+        // --- Event Handling ---
+        graph.on("node:click", (nodeId) => {
+          logEvent(`Node clicked: ${nodeId}`);
+        });
 
-            graph.on("edge:click", (edgeInfo) => {
-                logEvent(`Edge clicked: from '${edgeInfo.from}' to '${edgeInfo.to}'`);
-            });
-            
-            graph.on("node:argument:click", (argData) => {
-                logEvent(`Argument clicked on node '${argData.nodeId}': Name='${argData.name}', Value='${argData.value}'`, argData);
-            });
+        graph.on("edge:click", (edgeInfo) => {
+          logEvent(`Edge clicked: from '${edgeInfo.from}' to '${edgeInfo.to}'`);
+        });
 
-            // --- Render the Graph ---
-            try {
-                logEvent(`Rendering graph...`);
-                await graph.render();
-                logEvent("Graph rendered successfully.");
-            } catch (error) {
-                logEvent(`Error rendering graph: ${error.message}`, error);
-                console.error("Error rendering graph:", error);
-            }
+        graph.on("node:argument:click", (argData) => {
+          logEvent(
+            `Argument clicked on node '${argData.nodeId}': Name='${argData.name}', Value='${argData.value}'`,
+            argData
+          );
+        });
+
+        // --- Render the Graph ---
+        try {
+          logEvent(`Rendering graph...`);
+          await graph.render();
+          logEvent("Graph rendered successfully.");
+        } catch (error) {
+          logEvent(`Error rendering graph: ${error.message}`, error);
+          console.error("Error rendering graph:", error);
         }
+      }
 
-        // --- Event Listeners for Controls ---
-        layoutDirectionSelect.addEventListener("change", initializeAndRenderGraph);
+      // --- Event Listeners for Controls ---
+      layoutDirectionSelect.addEventListener(
+        "change",
+        initializeAndRenderGraph
+      );
 
-        // --- Initial Render ---
-        initializeAndRenderGraph();
+      // --- Initial Render ---
+      initializeAndRenderGraph();
     </script>
-</body>
+  </body>
 </html>
