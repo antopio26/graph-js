@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GraphLibrary - Themed Graph</title>
     <link rel="stylesheet" href="../source/css/grapher.css" />
+    <link rel="stylesheet" href="../source/css/theme.css" />
     <style>
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -23,6 +24,9 @@
       }
 
       #controls {
+        display: flex;
+        gap: 15px;
+        align-items: center;
         margin-bottom: 20px;
         padding: 10px;
         background-color: #fff;
@@ -70,65 +74,6 @@
       #event-log-output div:last-child {
         border-bottom: none;
       }
-
-      /* --- Custom Theme Styles --- */
-      .node path,
-      .node line {
-        stroke: #000;
-      }
-      .node .node-item path,
-      .node .node-item text {
-        transition: fill 0.2s ease-in-out;
-      }
-      .node:hover .node-item path {
-        fill: #ffffff !important;
-      }
-      .node:hover .node-item text {
-        fill: #000000 !important;
-      }
-      .op-node .node-item path {
-        fill: #4b5563;
-      }
-      .op-node .node-item text {
-        fill: #ffffff;
-      }
-      .gemm-node .node-item path {
-        fill: #3b82f6;
-      }
-      .gemm-node .node-item text {
-        fill: #ffffff;
-      }
-      .act-node .node-item path {
-        fill: #ef4444;
-      }
-      .act-node .node-item text {
-        fill: #ffffff;
-      }
-      .data-node .node-item path {
-        fill: #10b981;
-      }
-      .data-node .node-item text {
-        fill: #ffffff;
-      }
-      .flatten-node .node-item path {
-        fill: #8d5b29;
-      }
-      .flatten-node .node-item text {
-        fill: #ffffff;
-      }
-      .node-argument-list > path {
-        fill: #ffffff !important;
-      }
-      .node-argument > text,
-      .node-argument > text > tspan {
-        fill: #000000 !important;
-      }
-
-      /* --- New style for hovered edges --- */
-      .edge-path.hover {
-        stroke: #d81b60; /* A vivid red/pink for hover */
-        stroke-width: 1.5px;
-      }
     </style>
   </head>
   <body>
@@ -144,6 +89,7 @@
         <option value="TB" selected>Vertical</option>
         <option value="LR">Horizontal</option>
       </select>
+      <button id="save-svg-button">Download SVG</button>
     </div>
 
     <div id="graph-container"></div>
@@ -159,6 +105,9 @@
       const graphContainer = document.getElementById("graph-container");
       const layoutDirectionSelect = document.getElementById("layout-direction");
       const logOutput = document.getElementById("event-log-output");
+      const saveButton = document.getElementById("save-svg-button");
+
+      let graphInstance = null; // To hold a reference to the current graph
 
       function logEvent(message, data = null) {
         const timestamp = new Date().toLocaleTimeString();
@@ -180,74 +129,76 @@
           direction: currentLayoutDirection,
           nodeSep: 50,
           rankSep: 60,
-          compound: false,
+          compound: true,
         });
 
-        // --- Define Nodes (using styleClass for theming) ---
-        graph.addNode({ id: "input", label: "input", styleClass: "op-node" });
-        graph.addNode({ id: "cast", label: "Cast", styleClass: "op-node" });
+        graphInstance = graph; // Store the current instance
+
+        // --- Define Nodes (using generic style classes from theme.css) ---
+        graph.addNode({ id: "input", label: "input", styleClass: "node-info" });
+        graph.addNode({ id: "cast", label: "Cast", styleClass: "node-secondary" });
         graph.addNode({
           id: "flatten",
           label: "Flatten",
-          styleClass: "flatten-node",
+          styleClass: "node-warning",
         });
         graph.addNode({
           id: "gemm1",
           label: "Gemm",
-          styleClass: "gemm-node",
+          styleClass: "node-primary",
           style: { argSeparator: " " },
           arguments: { B: "(256x63)", C: "(256)" },
         });
-        graph.addNode({ id: "relu1", label: "Relu", styleClass: "act-node" });
+        graph.addNode({ id: "relu1", label: "Relu", styleClass: "node-danger" });
         graph.addNode({
           id: "gemm2",
           label: "Gemm",
-          styleClass: "gemm-node",
+          styleClass: "node-primary",
           style: { argSeparator: " " },
           arguments: { B: "(256x256)", C: "(256)" },
         });
-        graph.addNode({ id: "relu2", label: "Relu", styleClass: "act-node" });
+        graph.addNode({ id: "relu2", label: "Relu", styleClass: "node-danger" });
         graph.addNode({
           id: "gemm3",
           label: "Gemm",
-          styleClass: "gemm-node",
+          styleClass: "node-primary",
           style: { argSeparator: " " },
           arguments: { B: "(12x256)", C: "(12)" },
         });
         graph.addNode({
           id: "clip",
           label: "Clip",
-          styleClass: "act-node",
+          styleClass: "node-danger",
           style: { argSeparator: " = " },
           arguments: { min: "-20", max: "2" },
         });
-        graph.addNode({ id: "exp", label: "Exp", styleClass: "op-node" });
+        graph.addNode({ id: "exp", label: "Exp", styleClass: "node-secondary" });
         graph.addNode({
           id: "gemm4",
           label: "Gemm",
-          styleClass: "gemm-node",
+          styleClass: "node-primary",
           style: { argSeparator: " " },
           arguments: { B: "(12x256)", C: "(12)" },
         });
         graph.addNode({
           id: "shape1",
           label: "Shape",
-          styleClass: "data-node",
+          styleClass: "node-success",
         });
         graph.addNode({
           id: "const1",
           label: "ConstantOfShape",
-          styleClass: "data-node",
+          styleClass: "node-success",
         });
         graph.addNode({
           id: "shape2",
           label: "Shape",
-          styleClass: "data-node",
+          styleClass: "node-success",
         });
         graph.addNode({
           id: "const2",
           label: "ConstantOfShape",
-          styleClass: "data-node",
+          styleClass: "node-success",
         });
 
         // --- Define Edges ---
@@ -301,6 +252,14 @@
         "change",
         initializeAndRenderGraph
       );
+
+      saveButton.addEventListener("click", () => {
+        if (graphInstance) {
+          graphInstance.saveSvg("neural-network.svg");
+        } else {
+          logEvent("Cannot save: Graph not rendered yet.");
+        }
+      });
 
       // --- Initial Render ---
       initializeAndRenderGraph();

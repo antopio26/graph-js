@@ -1,0 +1,109 @@
+/* --- Standard Graph Theme with CSS Variables --- */
+
+:root {
+  /* New Modern Color Palette */
+  --indigo-dye: #08415c;
+  --persian-red: #cc2936;
+  --tea-rose-red: #ebbab9;
+  --blue-munsell: #388697;
+  --black: #1d1d1d;
+  --white: #f7f7f7;
+
+  /* Semantic Color Mapping */
+  --color-primary-bg: var(--indigo-dye);      /* For 'gemm' */
+  --color-secondary-bg: var(--blue-munsell);  /* For 'op' */
+  --color-danger-bg: var(--persian-red);    /* For 'act' */
+  --color-success-bg: var(--white);  /* For 'data' */
+  --color-warning-bg: var(--tea-rose-red);  /* For 'flatten' */
+  --color-info-bg: var(--black);  /* For 'info' */
+
+  /* Text, Borders, and Interactions */
+  --color-node-text-light: #ffffff;
+  --color-node-text-dark: #2d3748;
+  --color-border: #000000;
+  --color-argument-bg: #ffffff;
+  --color-argument-text: #000000;
+  
+  --color-hover-bg: #ffffff;
+  --color-hover-text: #000000;
+  --color-hover-border: #cc2936;   /* Persian Red for hover border */
+  --color-edge-hover: #cc2936;     /* Persian Red for edge hover */
+
+  /* Transitions & Sizing */
+  --transition-speed: 0.2s;
+  --border-width-hover: 1.5px;
+}
+
+/* --- General Structure --- */
+
+.node path,
+.node line {
+  stroke: var(--color-border);
+}
+
+.node .node-item path,
+.node .node-item text,
+.node-argument > rect {
+  transition: all var(--transition-speed) ease-in-out;
+}
+
+/* --- Node Type Styling (using general classes) --- */
+
+.node-primary .node-item path { fill: var(--color-primary-bg); }
+.node-primary .node-item text { fill: var(--color-node-text-light); }
+
+.node-secondary .node-item path { fill: var(--color-secondary-bg); }
+.node-secondary .node-item text { fill: var(--color-node-text-light); }
+
+.node-danger .node-item path { fill: var(--color-danger-bg); }
+.node-danger .node-item text { fill: var(--color-node-text-light); }
+
+/* Note: Success and Warning use a dark text color for readability on light backgrounds */
+.node-success .node-item path { fill: var(--color-success-bg); }
+.node-success .node-item text { fill: var(--color-node-text-dark); }
+
+.node-warning .node-item path { fill: var(--color-warning-bg); }
+.node-warning .node-item text { fill: var(--color-node-text-dark); }
+
+.node-info .node-item path { fill: var(--color-info-bg); }
+.node-info .node-item text { fill: var(--color-node-text-light); }
+
+
+/* --- Node Arguments --- */
+
+.node-argument-list > path {
+  fill: var(--color-argument-bg) !important;
+}
+
+.node-argument > text,
+.node-argument > text > tspan {
+  fill: var(--color-argument-text) !important;
+}
+
+/* --- Hover Effects --- */
+
+.node-item:hover > path {
+  fill: var(--color-hover-bg) !important;
+  stroke: var(--color-hover-border);
+  stroke-width: var(--border-width-hover);
+}
+
+.node-item:hover > text {
+  fill: var(--color-hover-text) !important;
+}
+
+.node-argument:hover > rect {
+  stroke: var(--color-hover-border);
+  stroke-width: var(--border-width-hover);
+}
+
+/* --- Edge Styling --- */
+
+.edge-path.hover {
+  stroke: var(--color-edge-hover);
+  stroke-width: 1.5px;
+}
+
+#arrowhead-hover {
+  fill: var(--color-edge-hover) !important;
+}

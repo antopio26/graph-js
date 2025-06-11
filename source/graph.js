@@ -309,6 +309,63 @@ export class GraphLibrary {
     }
 
     /**
+     * Saves the rendered graph as an SVG file, embedding all CSS styles.
+     * @param {string} [filename='graph.svg'] - The desired filename for the SVG file.
+     */
+    saveSvg(filename = 'graph.svg') {
+        const svgElement = this.container.querySelector('svg');
+        if (!svgElement) {
+            console.error('SVG element not found. Please render the graph first.');
+            alert('Please render a graph before trying to save it.');
+            return;
+        }
+
+        // Clone the SVG element to avoid modifying the one in the DOM
+        const svgClone = svgElement.cloneNode(true);
+        svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+        // Create a <style> element
+        const styleElement = document.createElement('style');
+        
+        // Aggregate all CSS rules from document stylesheets
+        let cssText = '';
+        for (const styleSheet of Array.from(document.styleSheets)) {
+            try {
+                if (styleSheet.cssRules) {
+                    for (const rule of Array.from(styleSheet.cssRules)) {
+                        cssText += rule.cssText + '\n';
+                    }
+                }
+            } catch (e) {
+                console.warn("Cannot read cross-origin stylesheet. Styles from it won't be embedded.", e);
+            }
+        }
+        
+        styleElement.textContent = cssText;
+
+        // Add the <style> element to the <defs> section of the SVG
+        let defs = svgClone.querySelector('defs');
+        if (!defs) {
+            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            svgClone.prepend(defs);
+        }
+        defs.appendChild(styleElement);
+        
+        const svgData = svgClone.outerHTML;
+        const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+
+    /**
      * @private
      * Emits an event to all registered listeners.
      * @param {string} eventType - The event type.
