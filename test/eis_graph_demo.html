@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIS Project - State/Action Graph Demo</title>
+    <link rel="stylesheet" href="../src/css/grapher.css" />
+    <link rel="stylesheet" href="../src/css/theme.css" />
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            margin: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        #graphContainer {
+            width: 100%;
+            max-width: 1200px;
+            height: 800px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative; /* Required by graph.js for SVG fitting */
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        p {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #3498db;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        /* graph.js default styles will apply, but you can add more specific ones here */
+        .node-label { font-weight: bold; } /* Class used by graph.js for node header text */
+        .cluster-label { fill: #555; font-size: 14px; } /* Class used by graph.js for cluster labels */
+
+        #event-log-container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 25px auto; /* Adjusted margin for centering */
+            background: #2f3640; /* Darker background for log */
+            color: #f5f6fa;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.9em;
+            height: 150px;
+            overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        #event-log-container strong {
+            color: #7ed6df; /* A light accent for the title */
+        }
+
+        #event-log-output div {
+            padding: 3px 0;
+            border-bottom: 1px solid #4a5058;
+        }
+        #event-log-output div:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>EIS Project - State/Action Graph</h1>
+    <p>This example demonstrates a simplified tree of states and actions using <code>graph.js</code>.</p>
+    <div id="graphContainer"></div>
+    <button id="saveSvgButton">Save as SVG</button>
+
+    <div id="event-log-container">
+        <strong>Event Log:</strong>
+        <div id="event-log-output"></div>
+    </div>
+
+    <script type="module">
+        // Ensure graph.js is in ../src/ and grapher.js is in the same directory as graph.js
+        // e.g., if this HTML is in examples/eis_graph_demo.html
+        // then graph.js is at ../src/graph.js
+        // and grapher.js is at ../src/grapher.js
+        import { GraphLibrary } from '../src/graph.js';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const logOutput = document.getElementById("event-log-output");
+
+            function logEvent(message, data = null) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement("div");
+                logEntry.textContent = `[${timestamp}] ${message}`;
+                logOutput.prepend(logEntry);
+                if (data) {
+                    console.log(`[Event] ${message}`, data);
+                }
+            }
+
+            logEvent("DOM content loaded. Initializing script.");
+
+            const container = document.getElementById('graphContainer');
+            if (!container) {
+                logEvent('Error: Graph container not found!', { error: 'Graph container #graphContainer not found in DOM.' });
+                return;
+            }
+
+            const graph = new GraphLibrary(container, {
+                direction: 'TB', // Top-to-Bottom layout
+                nodeSep: 60,     // Separation between nodes
+                rankSep: 120,    // Separation between ranks (layers)
+            });
+
+            logEvent("GraphLibrary instance created.");
+
+            // Define States (Nodes)
+            graph.addNode({
+                id: 'S0',
+                label: 'S0: Initial State',
+                arguments: {
+                    Timestamp: '0s',
+                    Score: '0',
+                    'UAV Task': 'none',
+                    'UAV Battery': '100%',
+                    'UAV Subzone': 'Base',
+                    'UGV Task': 'none',
+                    'UGV Battery': '100%',
+                    'UGV Subzone': 'Base',
+                },
+                style: { backgroundColor: '#e6f7ff' } // Light blue
+            });
+
+            graph.addNode({
+                id: 'S1',
+                label: 'S1: UAV Exploring SZ1.1',
+                arguments: {
+                    Timestamp: '10s',
+                    Score: '5',
+                    'UAV Task': 'explore (SZ1.1)',
+                    'UAV Battery': '95%',
+                    'UAV Subzone': 'SZ1.1',
+                    'UGV Task': 'none',
+                    'UGV Battery': '100%',
+                    'UGV Subzone': 'Base',
+                },
+                style: { backgroundColor: '#f0fff0' } // Honeydew
+            });
+
+            graph.addNode({
+                id: 'S2',
+                label: 'S2: UAV Finding Object',
+                arguments: {
+                    Timestamp: '20s',
+                    Score: '15',
+                    'UAV Task': 'find_object',
+                    'UAV P(Success)': '0.8',
+                    'UAV Battery': '90%',
+                    'UAV Subzone': 'SZ1.1',
+                    'UGV Task': 'none',
+                    'UGV Battery': '100%',
+                    'UGV Subzone': 'Base',
+                },
+                style: { backgroundColor: '#fffacd' } // Lemon chiffon
+            });
+
+            graph.addNode({
+                id: 'S3',
+                label: 'S3: UGV Exploring SZ2.2',
+                arguments: {
+                    Timestamp: '12s',
+                    Score: '4',
+                    'UAV Task': 'none',
+                    'UAV Battery': '100%',
+                    'UAV Subzone': 'Base',
+                    'UGV Task': 'explore (SZ2.2)',
+                    'UGV Battery': '92%',
+                    'UGV Subzone': 'SZ2.2',
+                },
+                style: { backgroundColor: '#f0f8ff' } // Alice blue
+            });
+
+            graph.addNode({
+                id: 'S4',
+                label: 'S4: UGV Looking at Target',
+                arguments: {
+                    Timestamp: '25s',
+                    Score: '20',
+                    'UAV Task': 'none',
+                    'UAV Battery': '100%',
+                    'UAV Subzone': 'Base',
+                    'UGV Task': 'stop_to_look',
+                    'UGV P(Success)': '0.9',
+                    'UGV Battery': '88%',
+                    'UGV Subzone': 'SZ2.2',
+                },
+                style: { backgroundColor: '#faebd7' } // Antique white
+            });
+
+            graph.addNode({
+                id: 'S5',
+                label: 'S5: UAV Continues Find',
+                arguments: {
+                    Timestamp: '30s',
+                    Score: '18',
+                    'UAV Task': 'find_object (cont.)',
+                    'UAV P(Success)': '0.85',
+                    'UAV Battery': '85%',
+                    'UAV Subzone': 'SZ1.1',
+                },
+                style: { backgroundColor: '#fff0f5' } // Lavender blush
+            });
+
+            // Define Actions (Edges)
+            graph.addEdge({ from: 'S0', to: 'S1', label: 'UAV: Explore SZ1.1' });
+            graph.addEdge({ from: 'S1', to: 'S2', label: 'UAV: Find Object' });
+            graph.addEdge({ from: 'S2', to: 'S5', label: 'UAV: Continue Task' });
+
+            graph.addEdge({ from: 'S0', to: 'S3', label: 'UGV: Explore SZ2.2' });
+            graph.addEdge({ from: 'S3', to: 'S4', label: 'UGV: Stop to Look' });
+
+            try {
+                logEvent("Rendering graph...");
+                await graph.render();
+                logEvent('Graph rendered successfully.');
+            } catch (error) {
+                logEvent(`Error rendering graph: ${error.message}`, error);
+                container.innerHTML = '<p style="color:red; text-align:center;">Error rendering graph. Check console.</p>';
+            }
+
+            // --- Event Handling (Optional - good to have for consistency) ---
+            graph.on("node:click", (nodeId) => {
+                logEvent(`Node clicked: ${nodeId}`);
+            });
+
+            graph.on("edge:click", (edgeInfo) => {
+                logEvent(`Edge clicked: from '${edgeInfo.from}' to '${edgeInfo.to}'`);
+            });
+
+            graph.on("node:argument:click", (argData) => {
+                logEvent(
+                    `Argument clicked on node '${argData.nodeId}': Name='${argData.name}', Value='${argData.value}'`,
+                    argData
+                );
+            });
+
+            document.getElementById('saveSvgButton').addEventListener('click', () => {
+                logEvent("Save SVG button clicked.");
+                graph.saveSvg('eis-state-action-graph.svg');
+                logEvent("SVG save function called for 'eis-state-action-graph.svg'.");
+            });
+        });
+    </script>
+</body>
+</html>
