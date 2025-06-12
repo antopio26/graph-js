@@ -268,7 +268,6 @@
             // Branching from S7
             graph.addEdge({ from: 'S7', to: 'S10', label: 'UAV Battery Low' });
             graph.addEdge({ from: 'S10', to: 'S5', label: 'UAV Emergency Return' }); // UAV Returns to Base
-            graph.addEdge({ from: 'S7', to: 'S12', label: 'UAV Spots Target for UGV' });
 
             graph.addEdge({ from: 'S0', to: 'S3', label: 'UGV Explores SZ2.2' });
             graph.addEdge({ from: 'S3', to: 'S4', label: 'UGV Finds Obj B' });
