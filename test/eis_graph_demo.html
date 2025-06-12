@@ -132,16 +132,7 @@
             graph.addNode({
                 id: 'S0',
                 label: 'S0: Initial State',
-                arguments: {
-                    Timestamp: '0s',
-                    Score: '0',
-                    'UAV Task': 'none',
-                    'UAV Battery': '100%',
-                    'UAV Subzone': 'Base',
-                    'UGV Task': 'none',
-                    'UGV Battery': '100%',
-                    'UGV Subzone': 'Base',
-                },
+                arguments: { Status: 'Ready' },
                 style: { backgroundColor: '#e6f7ff' } // Light blue
             });
 
@@ -149,31 +140,19 @@
                 id: 'S1',
                 label: 'S1: UAV Exploring SZ1.1',
                 arguments: {
-                    Timestamp: '10s',
-                    Score: '5',
-                    'UAV Task': 'explore (SZ1.1)',
-                    'UAV Battery': '95%',
-                    'UAV Subzone': 'SZ1.1',
-                    'UGV Task': 'none',
-                    'UGV Battery': '100%',
-                    'UGV Subzone': 'Base',
+                    Task: 'UAV Explore SZ1.1',
+                    Battery: '95%'
                 },
                 style: { backgroundColor: '#f0fff0' } // Honeydew
             });
 
             graph.addNode({
                 id: 'S2',
-                label: 'S2: UAV Finding Object',
+                label: 'S2: UAV Found Object A',
                 arguments: {
-                    Timestamp: '20s',
-                    Score: '15',
-                    'UAV Task': 'find_object',
-                    'UAV P(Success)': '0.8',
-                    'UAV Battery': '90%',
-                    'UAV Subzone': 'SZ1.1',
-                    'UGV Task': 'none',
-                    'UGV Battery': '100%',
-                    'UGV Subzone': 'Base',
+                    Outcome: 'Object A Found',
+                    Location: 'SZ1.1',
+                    Battery: '90%'
                 },
                 style: { backgroundColor: '#fffacd' } // Lemon chiffon
             });
@@ -182,56 +161,122 @@
                 id: 'S3',
                 label: 'S3: UGV Exploring SZ2.2',
                 arguments: {
-                    Timestamp: '12s',
-                    Score: '4',
-                    'UAV Task': 'none',
-                    'UAV Battery': '100%',
-                    'UAV Subzone': 'Base',
-                    'UGV Task': 'explore (SZ2.2)',
-                    'UGV Battery': '92%',
-                    'UGV Subzone': 'SZ2.2',
+                    Task: 'UGV Explore SZ2.2',
+                    Battery: '92%'
                 },
                 style: { backgroundColor: '#f0f8ff' } // Alice blue
             });
 
             graph.addNode({
                 id: 'S4',
-                label: 'S4: UGV Looking at Target',
+                label: 'S4: UGV Found Object B',
                 arguments: {
-                    Timestamp: '25s',
-                    Score: '20',
-                    'UAV Task': 'none',
-                    'UAV Battery': '100%',
-                    'UAV Subzone': 'Base',
-                    'UGV Task': 'stop_to_look',
-                    'UGV P(Success)': '0.9',
-                    'UGV Battery': '88%',
-                    'UGV Subzone': 'SZ2.2',
+                    Outcome: 'Object B Found',
+                    Location: 'SZ2.2',
+                    Battery: '88%'
                 },
                 style: { backgroundColor: '#faebd7' } // Antique white
             });
 
             graph.addNode({
                 id: 'S5',
-                label: 'S5: UAV Continues Find',
+                label: 'S5: UAV Returns to Base',
                 arguments: {
-                    Timestamp: '30s',
-                    Score: '18',
-                    'UAV Task': 'find_object (cont.)',
-                    'UAV P(Success)': '0.85',
-                    'UAV Battery': '85%',
-                    'UAV Subzone': 'SZ1.1',
+                    Status: 'Mission Leg Complete',
+                    Battery: '80%'
                 },
                 style: { backgroundColor: '#fff0f5' } // Lavender blush
             });
 
-            // Define Actions (Edges)
-            graph.addEdge({ from: 'S0', to: 'S1', label: 'UAV: Explore SZ1.1' });
-            graph.addEdge({ from: 'S1', to: 'S2', label: 'UAV: Find Object' });
-            graph.addEdge({ from: 'S2', to: 'S5', label: 'UAV: Continue Task' });
+            graph.addNode({
+                id: 'S6',
+                label: 'S6: UAV Found Nothing in SZ1.1',
+                arguments: {
+                    Outcome: 'SZ1.1 Clear',
+                    Battery: '85%'
+                },
+                style: { backgroundColor: '#f0fff0' } // Honeydew
+            });
 
-            graph.addEdge({ from: 'S0', to: 'S3', label: 'UGV: Explore SZ2.2' });
-            graph.addEdge({ from: 'S3', to: 'S4', label: 'UGV: Stop to Look' });
+            graph.addNode({
+                id: 'S7',
+                label: 'S7: UAV Exploring SZ3.1',
+                arguments: {
+                    Task: 'UAV Explore SZ3.1',
+                    Battery: '75%'
+                },
+                style: { backgroundColor: '#f0fff0' }
+            });
+
+            graph.addNode({
+                id: 'S8',
+                label: 'S8: UGV Secures Object B',
+                arguments: {
+                    Status: 'Object B Secured',
+                    Battery: '80%'
+                },
+                style: { backgroundColor: '#faebd7' }
+            });
+
+            graph.addNode({
+                id: 'S9',
+                label: 'S9: UGV Returns to Base',
+                arguments: {
+                    Status: 'Mission Leg Complete',
+                    Battery: '70%'
+                },
+                style: { backgroundColor: '#f0f8ff' }
+            });
+
+            graph.addNode({
+                id: 'S10',
+                label: 'S10: UAV Low Battery',
+                arguments: {
+                    Status: 'Low Battery Alert',
+                    Battery: '15%'
+                },
+                style: { backgroundColor: '#ffe4e1' } // Misty Rose - for alert/warning
+            });
+
+            graph.addNode({
+                id: 'S11',
+                label: 'S11: UGV Waits for UAV',
+                arguments: {
+                    Status: 'Holding Position',
+                    Battery: '65%'
+                },
+                style: { backgroundColor: '#e0ffff' } // Light Cyan
+            });
+
+            graph.addNode({
+                id: 'S12',
+                label: 'S12: Coordinated Action',
+                arguments: {
+                    Task: 'UAV Spots, UGV Secures',
+                    Location: 'SZ3.1'
+                },
+                style: { backgroundColor: '#d8bfd8' } // Thistle - for coordinated tasks
+            });
+
+
+            // Define Actions (Edges)
+            graph.addEdge({ from: 'S0', to: 'S1', label: 'UAV Explores SZ1.1' });
+            graph.addEdge({ from: 'S1', to: 'S2', label: 'UAV Finds Obj A' });
+            graph.addEdge({ from: 'S1', to: 'S6', label: 'UAV Finds Nothing' });
+            graph.addEdge({ from: 'S2', to: 'S5', label: 'UAV Returns' }); // UAV Returns to Base
+            graph.addEdge({ from: 'S6', to: 'S7', label: 'UAV Explores SZ3.1' });
+            // Branching from S7
+            graph.addEdge({ from: 'S7', to: 'S10', label: 'UAV Battery Low' });
+            graph.addEdge({ from: 'S10', to: 'S5', label: 'UAV Emergency Return' }); // UAV Returns to Base
+            graph.addEdge({ from: 'S7', to: 'S12', label: 'UAV Spots Target for UGV' });
+
+            graph.addEdge({ from: 'S0', to: 'S3', label: 'UGV Explores SZ2.2' });
+            graph.addEdge({ from: 'S3', to: 'S4', label: 'UGV Finds Obj B' });
+            graph.addEdge({ from: 'S3', to: 'S11', label: 'UGV Awaits Intel' }); // New branch for UGV
+            graph.addEdge({ from: 'S11', to: 'S12', label: 'UGV Receives Target' });
+            graph.addEdge({ from: 'S12', to: 'S8', label: 'UGV Moves to Secure' }); // S8 is UGV Secures Object B
+            graph.addEdge({ from: 'S4', to: 'S8', label: 'UGV Secures Obj B' });
+            graph.addEdge({ from: 'S8', to: 'S9', label: 'UGV Returns' }); // UGV Returns to Base
 
             try {
                 logEvent("Rendering graph...");
